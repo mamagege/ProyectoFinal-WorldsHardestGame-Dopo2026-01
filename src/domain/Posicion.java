@@ -3,7 +3,7 @@ package domain;
 import java.util.Objects;
 
 /**
- * Clase auxiliar para manejar coordenadas (x, y) de los elementos en el tablero.
+ * Clase auxiliar para manejar coordenadas x e y de los elementos en el tablero.
  * 
  * @author Oscar Lasso - Juan Gaitan
  * @version 2026

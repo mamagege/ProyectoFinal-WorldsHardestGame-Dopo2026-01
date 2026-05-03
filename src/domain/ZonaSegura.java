@@ -1,7 +1,7 @@
 package domain;
 
 /**
- * Representa la zona verde (inicial y final).
+ * Representa la zona verde inicial o final.
  * 
  * @author Oscar Lasso - Juan Gaitan
  * @version 2026

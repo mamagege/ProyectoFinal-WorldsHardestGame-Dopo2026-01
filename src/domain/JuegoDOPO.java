@@ -57,7 +57,7 @@ public class JuegoDOPO {
     }
 
     /**
-     * Lógica principal de colisiones (Reglas del juego).
+     * Lógica principal de colisiones y reglas del juego.
      */
     private void verificarColisiones() {
         // 1. Si el jugador toca un EnemigoBasico, suma una muerte y reinicia
