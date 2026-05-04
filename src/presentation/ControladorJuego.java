@@ -1,43 +1,38 @@
 package presentation;
 
-import domain.JuegoDOPO;
-import domain.Posicion;
+import domain.Level;
+import domain.Character;
 
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
 /**
- * Controlador que conecta las entradas del usuario (teclado) con el Modelo.
- * Escucha las teclas de flechas direccionales y actualiza el juego.
+ * Controlador MVC.
  * 
  * @author Oscar Lasso - Juan Gaitan
  * @version 2026
  */
 public class ControladorJuego extends KeyAdapter {
     private PanelJuego vista;
-    private JuegoDOPO modelo;
+    private GameWHG gameOrchestrator;
 
-    public ControladorJuego(PanelJuego vista, JuegoDOPO modelo) {
+    public ControladorJuego(PanelJuego vista, GameWHG gameOrchestrator) {
         this.vista = vista;
-        this.modelo = modelo;
+        this.gameOrchestrator = gameOrchestrator;
     }
 
-    /**
-     * Se invoca cuando una tecla física es presionada.
-     */
     @Override
     public void keyPressed(KeyEvent e) {
-        // No hacer nada si el nivel ya se completó
-        if (modelo.isNivelCompletado()) {
+        Level level = gameOrchestrator.getCurrentLevel();
+        if (level == null || level.isCompleted()) {
             return;
         }
 
         int keyCode = e.getKeyCode();
-        Posicion posActual = modelo.getJugador().getPosicion();
-        int nuevoX = posActual.getX();
-        int nuevoY = posActual.getY();
+        Character pJugador = level.getCharacter();
+        int nuevoX = pJugador.getPositionX();
+        int nuevoY = pJugador.getPositionY();
 
-        // Determinar la nueva coordenada deseada según la flecha presionada
         if (keyCode == KeyEvent.VK_UP) {
             nuevoY -= 1;
         } else if (keyCode == KeyEvent.VK_DOWN) {
@@ -47,16 +42,10 @@ public class ControladorJuego extends KeyAdapter {
         } else if (keyCode == KeyEvent.VK_RIGHT) {
             nuevoX += 1;
         } else {
-            // Si presionó otra tecla, ignoramos
             return;
         }
 
-        Posicion nuevaPosicion = new Posicion(nuevoX, nuevoY);
-
-        // Actualizar el estado del dominio
-        modelo.moverJugador(nuevaPosicion);
-
-        // Reflejar los cambios en la interfaz gráfica
+        level.moveCharacter(nuevoX, nuevoY);
         vista.actualizarInterfaz();
     }
 }
