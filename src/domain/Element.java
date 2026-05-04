@@ -20,12 +20,51 @@ public abstract class Element {
         this.height = height;
     }
 
-    public double getPositionX() { return positionX; }
-    public void setPositionX(double positionX) { this.positionX = positionX; }
-    public double getPositionY() { return positionY; }
-    public void setPositionY(double positionY) { this.positionY = positionY; }
-    public double getWidth() { return width; }
-    public void setWidth(double width) { this.width = width; }
-    public double getHeight() { return height; }
-    public void setHeight(double height) { this.height = height; }
+    public double getPositionX() {
+        return positionX;
+    }
+
+    public void setPositionX(double positionX) {
+        this.positionX = positionX;
+    }
+
+    public double getPositionY() {
+        return positionY;
+    }
+
+    public void setPositionY(double positionY) {
+        this.positionY = positionY;
+    }
+
+    public double getWidth() {
+        return width;
+    }
+
+    public void setWidth(double width) {
+        this.width = width;
+    }
+
+    public double getHeight() {
+        return height;
+    }
+
+    public void setHeight(double height) {
+        this.height = height;
+    }
+
+    public boolean isCircular() {
+        return false;
+    }
+
+    public double getRadius() {
+        return width / 2.0;
+    }
+
+    public double getCenterX() {
+        return positionX + (width / 2.0);
+    }
+
+    public double getCenterY() {
+        return positionY + (height / 2.0);
+    }
 }

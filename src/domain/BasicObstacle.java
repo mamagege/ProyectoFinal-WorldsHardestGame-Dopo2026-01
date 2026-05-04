@@ -10,7 +10,7 @@ public class BasicObstacle extends Obstacle {
     private boolean isHorizontal;
 
     public BasicObstacle(double positionX, double positionY, char direction, boolean isHorizontal) {
-        super(positionX, positionY, 1.0, 1.0, 1.0 * BASE_SPEED, direction);
+        super(positionX, positionY, 0.75, 0.75, 1.0 * BASE_SPEED, direction);
         this.isHorizontal = isHorizontal;
     }
 

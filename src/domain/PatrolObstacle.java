@@ -13,7 +13,7 @@ public class PatrolObstacle extends Obstacle {
     private double angle;
 
     public PatrolObstacle(double originX, double originY, double radius) {
-        super(originX + radius, originY, 1.0, 1.0, 1.0 * BASE_SPEED, 'N');
+        super(originX + radius, originY, 0.75, 0.75, 1.0 * BASE_SPEED, 'N');
         this.originX = originX;
         this.originY = originY;
         this.radius = radius;

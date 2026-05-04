@@ -10,7 +10,7 @@ public class FastObstacle extends Obstacle {
     private boolean isHorizontal;
 
     public FastObstacle(double positionX, double positionY, char direction, boolean isHorizontal) {
-        super(positionX, positionY, 1.0, 1.0, 2.0 * BASE_SPEED, direction);
+        super(positionX, positionY, 0.75, 0.75, 2.0 * BASE_SPEED, direction);
         this.isHorizontal = isHorizontal;
     }
 

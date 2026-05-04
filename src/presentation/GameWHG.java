@@ -34,18 +34,19 @@ public class GameWHG {
 
     private void prepareBoard() {
         levels = new ArrayList<>();
-        
-        // Configuración inicial del Nivel 1 con variantes
-        Character character = new RedCharacter(1.0, 1.0);
-        
+
+        // Configuración inicial del Nivel 1 con variantes (centradas visualmente)
+        Character character = new RedCharacter(1.125, 1.125);
+
         List<Obstacle> obstacles = new ArrayList<>();
-        obstacles.add(new FastObstacle(5.0, 5.0, 'R', true));
-        obstacles.add(new BasicObstacle(4.0, 3.0, 'D', false));
-        obstacles.add(new PatrolObstacle(7.0, 7.0, 2.0));
-        
+        obstacles.add(new FastObstacle(5.125, 5.125, 'R', true));
+        obstacles.add(new BasicObstacle(4.125, 3.125, 'D', false));
+        obstacles.add(new PatrolObstacle(7.125, 7.125, 2.0));
+
         List<Coin> coins = new ArrayList<>();
-        coins.add(new Coin(8.0, 3.0, 1.0, 1.0));
-        
+        // Tamaño moneda 0.5, offset 0.25
+        coins.add(new Coin(8.25, 3.25, 0.5, 0.5));
+
         List<Wall> walls = new ArrayList<>();
         for (int i = 0; i < 11; i++) {
             walls.add(new Wall(i, 0, 1.0, 1.0));
@@ -53,10 +54,10 @@ public class GameWHG {
             walls.add(new Wall(0, i, 1.0, 1.0));
             walls.add(new Wall(10, i, 1.0, 1.0));
         }
-        
+
         List<Checkpoint> checkpoints = new ArrayList<>();
         checkpoints.add(new Checkpoint(1.0, 1.0, 1.0, 1.0));
-        
+
         Goal goal = new Goal(8.0, 8.0, 1.0, 1.0);
 
         currentLevel = new Level(character, obstacles, coins, walls, checkpoints, goal);

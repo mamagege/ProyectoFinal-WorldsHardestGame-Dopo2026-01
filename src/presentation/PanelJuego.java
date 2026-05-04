@@ -106,22 +106,21 @@ public class PanelJuego extends JPanel {
         g2d.setColor(Color.YELLOW);
         for (Coin moneda : level.getCoins()) {
             if (!moneda.isCollected()) {
-                int padding = 10;
-                int radio = (int)(moneda.getWidth() * TAMANO_CELDA) - (padding * 2);
-                int px = offsetX + (int)(moneda.getPositionX() * TAMANO_CELDA) + padding;
-                int py = offsetY + (int)(moneda.getPositionY() * TAMANO_CELDA) + padding;
-                g2d.fillOval(px, py, radio, radio);
+                int px = offsetX + (int)(moneda.getPositionX() * TAMANO_CELDA);
+                int py = offsetY + (int)(moneda.getPositionY() * TAMANO_CELDA);
+                int w = (int)(moneda.getWidth() * TAMANO_CELDA);
+                int h = (int)(moneda.getHeight() * TAMANO_CELDA);
+                g2d.fillOval(px, py, w, h);
             }
         }
 
         // 4. Enemigos Básicos
         g2d.setColor(Color.BLUE);
         for (Obstacle enemigo : level.getObstacles()) {
-            int padding = 5;
-            int w = (int)(enemigo.getWidth() * TAMANO_CELDA) - (padding * 2);
-            int h = (int)(enemigo.getHeight() * TAMANO_CELDA) - (padding * 2);
-            int px = offsetX + (int)(enemigo.getPositionX() * TAMANO_CELDA) + padding;
-            int py = offsetY + (int)(enemigo.getPositionY() * TAMANO_CELDA) + padding;
+            int px = offsetX + (int)(enemigo.getPositionX() * TAMANO_CELDA);
+            int py = offsetY + (int)(enemigo.getPositionY() * TAMANO_CELDA);
+            int w = (int)(enemigo.getWidth() * TAMANO_CELDA);
+            int h = (int)(enemigo.getHeight() * TAMANO_CELDA);
             g2d.fillOval(px, py, w, h);
         }
 
@@ -135,11 +134,10 @@ public class PanelJuego extends JPanel {
             g2d.setColor(Color.RED);
         }
         
-        int pJug = 5;
-        int pw = (int)(pJugador.getWidth() * TAMANO_CELDA) - (pJug * 2);
-        int ph = (int)(pJugador.getHeight() * TAMANO_CELDA) - (pJug * 2);
-        int px = offsetX + (int)(pJugador.getPositionX() * TAMANO_CELDA) + pJug;
-        int py = offsetY + (int)(pJugador.getPositionY() * TAMANO_CELDA) + pJug;
+        int px = offsetX + (int)(pJugador.getPositionX() * TAMANO_CELDA);
+        int py = offsetY + (int)(pJugador.getPositionY() * TAMANO_CELDA);
+        int pw = (int)(pJugador.getWidth() * TAMANO_CELDA);
+        int ph = (int)(pJugador.getHeight() * TAMANO_CELDA);
         
         g2d.fillRect(px, py, pw, ph);
         g2d.setColor(Color.BLACK);

@@ -15,4 +15,9 @@ public abstract class Obstacle extends Alive {
     public void move(char direction) {
         this.direction = direction;
     }
+
+    @Override
+    public boolean isCircular() {
+        return true;
+    }
 }

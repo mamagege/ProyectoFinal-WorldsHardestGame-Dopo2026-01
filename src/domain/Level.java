@@ -42,7 +42,7 @@ public class Level {
             double oldY = obstacle.getPositionY();
             obstacle.updatePosition();
             for (Wall wall : walls) {
-                if (checkAABBCollision(obstacle, wall)) {
+                if (CollisionDetector.checkCollision(obstacle, wall)) {
                     obstacle.setPositionX(oldX);
                     obstacle.setPositionY(oldY);
                     if (obstacle instanceof BasicObstacle) ((BasicObstacle) obstacle).bounce();
@@ -65,9 +65,9 @@ public class Level {
 
         character.updatePosition();
 
-        // Evita el movimiento a través de paredes usando AABB
+        // Evita el movimiento a través de paredes usando hitboxes
         for (Wall wall : walls) {
-            if (checkAABBCollision(character, wall)) {
+            if (CollisionDetector.checkCollision(character, wall)) {
                 // Si choca, deshacemos el movimiento
                 character.setPositionX(oldX);
                 character.setPositionY(oldY);
@@ -79,7 +79,7 @@ public class Level {
     private void checkCollisions() {
         // Colisiones con obstáculos mortales
         for (Obstacle obstacle : obstacles) {
-            if (checkAABBCollision(character, obstacle)) {
+            if (CollisionDetector.checkCollision(character, obstacle)) {
                 if (character.hasArmor()) {
                     character.removeArmor();
                     resetCharacterPosition(); 
@@ -93,25 +93,15 @@ public class Level {
 
         // Recolección de monedas
         for (Coin coin : coins) {
-            if (!coin.isCollected() && checkAABBCollision(character, coin)) {
+            if (!coin.isCollected() && CollisionDetector.checkCollision(character, coin)) {
                 coin.collect();
             }
         }
 
         // Comprueba la condición de victoria
-        if (allCoinsCollected() && checkAABBCollision(character, goal)) {
+        if (allCoinsCollected() && CollisionDetector.checkCollision(character, goal)) {
             completed = true;
         }
-    }
-
-    /**
-     * Verifica la intersección de dos rectángulos (Axis-Aligned Bounding Box).
-     */
-    public boolean checkAABBCollision(Element e1, Element e2) {
-        return e1.getPositionX() < e2.getPositionX() + e2.getWidth() &&
-               e1.getPositionX() + e1.getWidth() > e2.getPositionX() &&
-               e1.getPositionY() < e2.getPositionY() + e2.getHeight() &&
-               e1.getPositionY() + e1.getHeight() > e2.getPositionY();
     }
 
     private void resetCharacterPosition() {

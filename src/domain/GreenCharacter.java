@@ -9,7 +9,7 @@ package domain;
  */
 public class GreenCharacter extends Character {
     public GreenCharacter(double positionX, double positionY) {
-        super(positionX, positionY, 1.0, 1.0, 1.0 * BASE_SPEED);
+        super(positionX, positionY, 0.75, 0.75, 1.0 * BASE_SPEED);
         this.hasArmor = true;
     }
 

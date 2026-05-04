@@ -42,13 +42,33 @@ public class LevelTest {
     }
 
     @Test
-    public void checkAABBCollisionDetectsOverlap() {
+    public void checkCollisionDetectsRectRectOverlap() {
         Element e1 = new Wall(0.0, 0.0, 1.0, 1.0);
         Element e2 = new Wall(0.5, 0.5, 1.0, 1.0);
-        assertTrue(level.checkAABBCollision(e1, e2), "Los elementos superpuestos deben colisionar");
+        assertTrue(CollisionDetector.checkCollision(e1, e2), "Los rectángulos superpuestos deben colisionar");
 
         Element e3 = new Wall(2.0, 2.0, 1.0, 1.0);
-        assertFalse(level.checkAABBCollision(e1, e3), "Los elementos separados no deben colisionar");
+        assertFalse(CollisionDetector.checkCollision(e1, e3), "Los rectángulos separados no deben colisionar");
+    }
+
+    @Test
+    public void checkCollisionDetectsCircleRectOverlap() {
+        // Personaje (Rectángulo) en 0,0 tamaño 1x1
+        Element rect = new RedCharacter(0.0, 0.0);
+        // Obstáculo (Círculo) que apenas roza la esquina
+        Element circle = new BasicObstacle(1.0, 1.0, 'R', true);
+        
+        // El centro del círculo en (1.5, 1.5), radio 0.5. 
+        // El punto del rectángulo más cercano es (1.0, 1.0).
+        // Distancia euclidiana: sqrt(0.5^2 + 0.5^2) = sqrt(0.5) = 0.707
+        // El radio es 0.5. 0.707 no es menor que 0.5, así que NO colisionan.
+        assertFalse(CollisionDetector.checkCollision(circle, rect), "No deben colisionar de esquina (distancia > radio)");
+        
+        // Acercar el círculo a (0.7, 0.7), centro (1.2, 1.2).
+        // Punto más cercano (1.0, 1.0). Distancia: sqrt(0.2^2 + 0.2^2) = 0.28
+        // Radio: 0.5. Como 0.28 < 0.5, SÍ colisionan.
+        Element circleClose = new BasicObstacle(0.7, 0.7, 'R', true);
+        assertTrue(CollisionDetector.checkCollision(circleClose, rect), "Deben colisionar, el círculo penetra la esquina");
     }
 
     @Test

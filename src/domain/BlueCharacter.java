@@ -8,6 +8,6 @@ package domain;
  */
 public class BlueCharacter extends Character {
     public BlueCharacter(double positionX, double positionY) {
-        super(positionX, positionY, 1.5, 1.5, 1.5 * BASE_SPEED);
+        super(positionX, positionY, 1.125, 1.125, 1.5 * BASE_SPEED);
     }
 }
