@@ -7,7 +7,7 @@ package domain;
  * @version 2026
  */
 public class Wall extends Element {
-    public Wall(int positionX, int positionY, int width, int height) {
+    public Wall(double positionX, double positionY, double width, double height) {
         super(positionX, positionY, width, height);
     }
 }

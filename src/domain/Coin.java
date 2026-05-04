@@ -9,7 +9,7 @@ package domain;
 public class Coin extends Element {
     private boolean collected;
 
-    public Coin(int positionX, int positionY, int width, int height) {
+    public Coin(double positionX, double positionY, double width, double height) {
         super(positionX, positionY, width, height);
         this.collected = false;
     }

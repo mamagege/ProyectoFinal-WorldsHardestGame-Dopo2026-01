@@ -1,8 +1,10 @@
 package presentation;
 
 import domain.*;
-import domain.Character;
+import domain.Character; // Para resolver ambiguedad
 
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,14 +16,10 @@ import java.util.List;
  * @version 2026
  */
 public class GameWHG {
-    private int boardWidth;
-    private int boardHeight;
-    private int score;
-    private int deaths;
     private Level currentLevel;
     private List<Level> levels;
-
     private VentanaPrincipal mainWindow;
+    private Timer gameLoopTimer;
 
     public GameWHG() {
         prepareElements();
@@ -36,36 +34,39 @@ public class GameWHG {
 
     private void prepareBoard() {
         levels = new ArrayList<>();
-
-        // Configuración inicial del Nivel 1
-        Character character = new Character(1, 1, 1, 1, 1);
-
+        
+        // Configuración inicial del Nivel 1 con variantes
+        Character character = new RedCharacter(1.0, 1.0);
+        
         List<Obstacle> obstacles = new ArrayList<>();
-        obstacles.add(new Obstacle(5, 5, 1, 1, 1, 'R', true));
-        obstacles.add(new Obstacle(4, 3, 1, 1, 1, 'D', false));
-
+        obstacles.add(new FastObstacle(5.0, 5.0, 'R', true));
+        obstacles.add(new BasicObstacle(4.0, 3.0, 'D', false));
+        obstacles.add(new PatrolObstacle(7.0, 7.0, 2.0));
+        
         List<Coin> coins = new ArrayList<>();
-        coins.add(new Coin(8, 3, 1, 1));
-
+        coins.add(new Coin(8.0, 3.0, 1.0, 1.0));
+        
         List<Wall> walls = new ArrayList<>();
         for (int i = 0; i < 11; i++) {
-            walls.add(new Wall(i, 0, 1, 1));
-            walls.add(new Wall(i, 10, 1, 1));
-            walls.add(new Wall(0, i, 1, 1));
-            walls.add(new Wall(10, i, 1, 1));
+            walls.add(new Wall(i, 0, 1.0, 1.0));
+            walls.add(new Wall(i, 10, 1.0, 1.0));
+            walls.add(new Wall(0, i, 1.0, 1.0));
+            walls.add(new Wall(10, i, 1.0, 1.0));
         }
-
+        
         List<Checkpoint> checkpoints = new ArrayList<>();
-        checkpoints.add(new Checkpoint(1, 1, 1, 1));
-
-        Goal goal = new Goal(8, 8, 1, 1);
+        checkpoints.add(new Checkpoint(1.0, 1.0, 1.0, 1.0));
+        
+        Goal goal = new Goal(8.0, 8.0, 1.0, 1.0);
 
         currentLevel = new Level(character, obstacles, coins, walls, checkpoints, goal);
         levels.add(currentLevel);
     }
 
     private void prepareActions() {
-        // Mapeo de eventos o acciones principales del orquestador
+        // Timer configurado a ~60 FPS (16 ms)
+        gameLoopTimer = new Timer(16, e -> tick());
+        gameLoopTimer.start();
     }
 
     public Level getCurrentLevel() {
@@ -73,8 +74,10 @@ public class GameWHG {
     }
 
     public void tick() {
-        // Delega la actualización de la interfaz gráfica
-        if (mainWindow != null) {
+        if (currentLevel != null) {
+            currentLevel.tick();
+        }
+        if (mainWindow != null && mainWindow.getPanelJuego() != null) {
             mainWindow.getPanelJuego().actualizarInterfaz();
         }
     }
@@ -84,7 +87,7 @@ public class GameWHG {
     }
 
     public static void main(String[] args) {
-        javax.swing.SwingUtilities.invokeLater(() -> {
+        SwingUtilities.invokeLater(() -> {
             GameWHG game = new GameWHG();
             game.mainWindow.setVisible(true);
         });

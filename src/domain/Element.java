@@ -8,24 +8,24 @@ package domain;
  * @version 2026
  */
 public abstract class Element {
-    protected int positionX;
-    protected int positionY;
-    protected int width;
-    protected int height;
+    protected double positionX;
+    protected double positionY;
+    protected double width;
+    protected double height;
 
-    public Element(int positionX, int positionY, int width, int height) {
+    public Element(double positionX, double positionY, double width, double height) {
         this.positionX = positionX;
         this.positionY = positionY;
         this.width = width;
         this.height = height;
     }
 
-    public int getPositionX() { return positionX; }
-    public void setPositionX(int positionX) { this.positionX = positionX; }
-    public int getPositionY() { return positionY; }
-    public void setPositionY(int positionY) { this.positionY = positionY; }
-    public int getWidth() { return width; }
-    public void setWidth(int width) { this.width = width; }
-    public int getHeight() { return height; }
-    public void setHeight(int height) { this.height = height; }
+    public double getPositionX() { return positionX; }
+    public void setPositionX(double positionX) { this.positionX = positionX; }
+    public double getPositionY() { return positionY; }
+    public void setPositionY(double positionY) { this.positionY = positionY; }
+    public double getWidth() { return width; }
+    public void setWidth(double width) { this.width = width; }
+    public double getHeight() { return height; }
+    public void setHeight(double height) { this.height = height; }
 }

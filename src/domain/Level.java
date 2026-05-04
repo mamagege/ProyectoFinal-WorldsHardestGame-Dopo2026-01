@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * Representa un nivel individual del juego.
- * Administra las entidades y aplica las reglas de colisión y victoria.
+ * Administra las entidades y aplica las reglas de colisión y victoria (AABB).
  * 
  * @author Oscar Lasso - Juan Gaitan
  * @version 2026
@@ -31,57 +31,94 @@ public class Level {
     }
 
     /**
-     * Intenta mover al personaje validando los límites y colisiones.
+     * Motor lógico del nivel. Se llama en cada cuadro (frame) del Game Loop.
      */
-    public void moveCharacter(int targetX, int targetY) {
+    public void tick() {
         if (completed) return;
-        
-        // Evita el movimiento a través de paredes
-        for (Wall wall : walls) {
-            if (wall.getPositionX() == targetX && wall.getPositionY() == targetY) {
-                return; // Movimiento bloqueado
+
+        // 1. Mover obstáculos y rebotar en paredes
+        for (Obstacle obstacle : obstacles) {
+            double oldX = obstacle.getPositionX();
+            double oldY = obstacle.getPositionY();
+            obstacle.updatePosition();
+            for (Wall wall : walls) {
+                if (checkAABBCollision(obstacle, wall)) {
+                    obstacle.setPositionX(oldX);
+                    obstacle.setPositionY(oldY);
+                    if (obstacle instanceof BasicObstacle) ((BasicObstacle) obstacle).bounce();
+                    if (obstacle instanceof FastObstacle) ((FastObstacle) obstacle).bounce();
+                    break;
+                }
             }
         }
 
-        // Actualiza la posición
-        character.updatePosition(targetX, targetY);
-        
+        // 2. Mover personaje y validar paredes
+        moveCharacter();
+
+        // 3. Chequear colisiones (AABB)
         checkCollisions();
+    }
+
+    private void moveCharacter() {
+        double oldX = character.getPositionX();
+        double oldY = character.getPositionY();
+
+        character.updatePosition();
+
+        // Evita el movimiento a través de paredes usando AABB
+        for (Wall wall : walls) {
+            if (checkAABBCollision(character, wall)) {
+                // Si choca, deshacemos el movimiento
+                character.setPositionX(oldX);
+                character.setPositionY(oldY);
+                break;
+            }
+        }
     }
 
     private void checkCollisions() {
         // Colisiones con obstáculos mortales
         for (Obstacle obstacle : obstacles) {
-            if (obstacle.getPositionX() == character.getPositionX() && 
-                obstacle.getPositionY() == character.getPositionY()) {
-                
-                character.incrementDeaths();
-                resetCharacterPosition();
+            if (checkAABBCollision(character, obstacle)) {
+                if (character.hasArmor()) {
+                    character.removeArmor();
+                    resetCharacterPosition(); 
+                } else {
+                    character.incrementDeaths();
+                    resetCharacterPosition();
+                }
                 return;
             }
         }
 
         // Recolección de monedas
         for (Coin coin : coins) {
-            if (!coin.isCollected() && 
-                coin.getPositionX() == character.getPositionX() && 
-                coin.getPositionY() == character.getPositionY()) {
+            if (!coin.isCollected() && checkAABBCollision(character, coin)) {
                 coin.collect();
             }
         }
 
         // Comprueba la condición de victoria
-        if (allCoinsCollected() && 
-            goal.getPositionX() == character.getPositionX() && 
-            goal.getPositionY() == character.getPositionY()) {
+        if (allCoinsCollected() && checkAABBCollision(character, goal)) {
             completed = true;
         }
+    }
+
+    /**
+     * Verifica la intersección de dos rectángulos (Axis-Aligned Bounding Box).
+     */
+    public boolean checkAABBCollision(Element e1, Element e2) {
+        return e1.getPositionX() < e2.getPositionX() + e2.getWidth() &&
+               e1.getPositionX() + e1.getWidth() > e2.getPositionX() &&
+               e1.getPositionY() < e2.getPositionY() + e2.getHeight() &&
+               e1.getPositionY() + e1.getHeight() > e2.getPositionY();
     }
 
     private void resetCharacterPosition() {
         if (!checkpoints.isEmpty()) {
             Checkpoint initial = checkpoints.get(0);
-            character.updatePosition(initial.getPositionX(), initial.getPositionY());
+            character.setPositionX(initial.getPositionX());
+            character.setPositionY(initial.getPositionY());
         }
     }
 

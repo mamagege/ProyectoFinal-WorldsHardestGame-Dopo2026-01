@@ -7,7 +7,7 @@ package domain;
  * @version 2026
  */
 public abstract class Zone extends Element {
-    public Zone(int positionX, int positionY, int width, int height) {
+    public Zone(double positionX, double positionY, double width, double height) {
         super(positionX, positionY, width, height);
     }
 }

@@ -1,6 +1,6 @@
 package presentation;
 
-import domain.Level;
+import domain.*;
 import domain.Character;
 
 import java.awt.event.KeyAdapter;
@@ -8,44 +8,57 @@ import java.awt.event.KeyEvent;
 
 /**
  * Controlador MVC.
+ * Maneja eventos de teclado para el movimiento continuo.
  * 
  * @author Oscar Lasso - Juan Gaitan
  * @version 2026
  */
 public class ControladorJuego extends KeyAdapter {
-    private PanelJuego vista;
     private GameWHG gameOrchestrator;
+    
+    private boolean upPressed = false;
+    private boolean downPressed = false;
+    private boolean leftPressed = false;
+    private boolean rightPressed = false;
 
     public ControladorJuego(PanelJuego vista, GameWHG gameOrchestrator) {
-        this.vista = vista;
         this.gameOrchestrator = gameOrchestrator;
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
+        setKeyState(e.getKeyCode(), true);
+        updateVelocity();
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        setKeyState(e.getKeyCode(), false);
+        updateVelocity();
+    }
+    
+    private void setKeyState(int keyCode, boolean pressed) {
+        if (keyCode == KeyEvent.VK_UP) upPressed = pressed;
+        if (keyCode == KeyEvent.VK_DOWN) downPressed = pressed;
+        if (keyCode == KeyEvent.VK_LEFT) leftPressed = pressed;
+        if (keyCode == KeyEvent.VK_RIGHT) rightPressed = pressed;
+    }
+    
+    private void updateVelocity() {
         Level level = gameOrchestrator.getCurrentLevel();
-        if (level == null || level.isCompleted()) {
-            return;
-        }
-
-        int keyCode = e.getKeyCode();
+        if (level == null || level.isCompleted()) return;
+        
         Character pJugador = level.getCharacter();
-        int nuevoX = pJugador.getPositionX();
-        int nuevoY = pJugador.getPositionY();
-
-        if (keyCode == KeyEvent.VK_UP) {
-            nuevoY -= 1;
-        } else if (keyCode == KeyEvent.VK_DOWN) {
-            nuevoY += 1;
-        } else if (keyCode == KeyEvent.VK_LEFT) {
-            nuevoX -= 1;
-        } else if (keyCode == KeyEvent.VK_RIGHT) {
-            nuevoX += 1;
-        } else {
-            return;
-        }
-
-        level.moveCharacter(nuevoX, nuevoY);
-        vista.actualizarInterfaz();
+        double speed = pJugador.getSpeed();
+        
+        double vx = 0;
+        double vy = 0;
+        
+        if (upPressed) vy -= speed;
+        if (downPressed) vy += speed;
+        if (leftPressed) vx -= speed;
+        if (rightPressed) vx += speed;
+        
+        pJugador.setVelocity(vx, vy);
     }
 }

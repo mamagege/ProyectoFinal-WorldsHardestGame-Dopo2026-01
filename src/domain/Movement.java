@@ -9,5 +9,5 @@ package domain;
 public interface Movement {
     void move(char direction);
     void updatePosition();
-    void updatePosition(int newPositionX, int newPositionY);
+    void updatePosition(double newPositionX, double newPositionY);
 }

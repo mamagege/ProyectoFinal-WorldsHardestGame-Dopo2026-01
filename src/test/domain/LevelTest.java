@@ -1,4 +1,4 @@
-
+package domain;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +9,7 @@ import java.util.List;
 
 /**
  * Pruebas unitarias para verificar la lógica de los niveles.
+ * Actualizadas para físicas continuas y AABB.
  * 
  * @author Oscar Lasso - Juan Gaitan
  * @version 2026
@@ -25,12 +26,12 @@ public class LevelTest {
 
     @BeforeEach
     public void setUp() {
-        character = new Character(0, 0, 1, 1, 1);
-        checkpoint = new Checkpoint(0, 0, 1, 1);
-        goal = new Goal(5, 5, 1, 1);
-        wall = new Wall(1, 0, 1, 1);
-        obstacle = new Obstacle(0, 2, 1, 1, 1, 'R', true);
-        coin = new Coin(2, 2, 1, 1);
+        character = new RedCharacter(0.0, 0.0);
+        checkpoint = new Checkpoint(0.0, 0.0, 1.0, 1.0);
+        goal = new Goal(5.0, 5.0, 1.0, 1.0);
+        wall = new Wall(1.0, 0.0, 1.0, 1.0);
+        obstacle = new BasicObstacle(0.0, 2.0, 'R', true);
+        coin = new Coin(2.0, 2.0, 1.0, 1.0);
         
         List<Checkpoint> checkpoints = Arrays.asList(checkpoint);
         List<Wall> walls = Arrays.asList(wall);
@@ -41,35 +42,53 @@ public class LevelTest {
     }
 
     @Test
-    public void characterMovesCorrectly() {
-        level.moveCharacter(0, 1);
-        assertEquals(0, character.getPositionX(), "La posición X debe ser 0");
-        assertEquals(1, character.getPositionY(), "La posición Y debe ser 1");
+    public void checkAABBCollisionDetectsOverlap() {
+        Element e1 = new Wall(0.0, 0.0, 1.0, 1.0);
+        Element e2 = new Wall(0.5, 0.5, 1.0, 1.0);
+        assertTrue(level.checkAABBCollision(e1, e2), "Los elementos superpuestos deben colisionar");
+
+        Element e3 = new Wall(2.0, 2.0, 1.0, 1.0);
+        assertFalse(level.checkAABBCollision(e1, e3), "Los elementos separados no deben colisionar");
     }
 
     @Test
     public void wallsBlockMovement() {
-        level.moveCharacter(1, 0); // La pared está en 1,0
-        assertEquals(0, character.getPositionX(), "La posición X no debe cambiar");
-        assertEquals(0, character.getPositionY(), "La posición Y no debe cambiar");
+        // Forzamos el choque para verificar que no atraviesa
+        character.setPositionX(0.9);
+        character.setVelocity(0.2, 0); // Esto lo llevaría a 1.1, solapando la pared (1.0)
+        level.tick();
+        
+        // Debería haberse deshecho el movimiento (regresa a 0.9)
+        assertEquals(0.9, character.getPositionX(), 0.001, "La posición X no debe penetrar la pared");
     }
 
     @Test
-    public void touchingObstacleCausesDeathAndReset() {
-        int initialDeaths = character.getDeaths();
-        level.moveCharacter(0, 2); // El obstáculo está en 0,2
+    public void greenCharacterArmorLogic() {
+        GreenCharacter greenChar = new GreenCharacter(0.0, 2.0);
+        Level greenLevel = new Level(greenChar, Arrays.asList(obstacle), Arrays.asList(coin), Arrays.asList(wall), Arrays.asList(checkpoint), goal);
         
-        assertEquals(initialDeaths + 1, character.getDeaths(), "Las muertes deben aumentar en 1");
-        assertEquals(checkpoint.getPositionX(), character.getPositionX(), "Debe reiniciar en la X del punto de control");
-        assertEquals(checkpoint.getPositionY(), character.getPositionY(), "Debe reiniciar en la Y del punto de control");
+        // Forzamos colisión
+        greenChar.setPositionX(obstacle.getPositionX());
+        greenChar.setPositionY(obstacle.getPositionY());
+        
+        int initialDeaths = greenChar.getDeaths();
+        greenLevel.tick(); // Evalúa colisiones
+        
+        assertEquals(initialDeaths, greenChar.getDeaths(), "No debe morir con armadura");
+        assertFalse(greenChar.hasArmor(), "Debe perder la armadura");
+        assertEquals(0.7 * Alive.BASE_SPEED, greenChar.getSpeed(), 0.001, "Su velocidad debe reducirse");
     }
 
     @Test
     public void collectingCoinsAndReachingGoalCompletesLevel() {
-        level.moveCharacter(2, 2); // Recolecta moneda
+        character.setPositionX(2.0);
+        character.setPositionY(2.0); // Encima de la moneda
+        level.tick();
         assertTrue(coin.isCollected(), "La moneda debe estar recolectada");
         
-        level.moveCharacter(5, 5); // Llega a la meta
+        character.setPositionX(5.0);
+        character.setPositionY(5.0); // Encima de la meta
+        level.tick();
         assertTrue(level.isCompleted(), "El nivel debe estar completado");
     }
 }

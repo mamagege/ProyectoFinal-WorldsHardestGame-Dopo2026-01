@@ -7,7 +7,7 @@ package domain;
  * @version 2026
  */
 public class Checkpoint extends Zone {
-    public Checkpoint(int positionX, int positionY, int width, int height) {
+    public Checkpoint(double positionX, double positionY, double width, double height) {
         super(positionX, positionY, width, height);
     }
 }
