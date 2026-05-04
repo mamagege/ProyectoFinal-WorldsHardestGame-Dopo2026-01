@@ -36,6 +36,16 @@ public class Level {
     public void tick() {
         if (completed) return;
 
+        if (character.isExploding()) {
+            character.updateExplosion();
+            if (!character.isExploding()) {
+                // La animación terminó
+                character.incrementDeaths();
+                resetCharacterPosition();
+            }
+            return; // Pausa el juego mientras ocurre la animación
+        }
+
         // 1. Mover obstáculos y rebotar en paredes
         for (Obstacle obstacle : obstacles) {
             double oldX = obstacle.getPositionX();
@@ -84,8 +94,7 @@ public class Level {
                     character.removeArmor();
                     resetCharacterPosition(); 
                 } else {
-                    character.incrementDeaths();
-                    resetCharacterPosition();
+                    character.triggerExplosion(); // Inicia animación en vez de morir instántaneamente
                 }
                 return;
             }

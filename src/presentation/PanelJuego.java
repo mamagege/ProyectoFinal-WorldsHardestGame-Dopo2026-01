@@ -124,23 +124,35 @@ public class PanelJuego extends JPanel {
             g2d.fillOval(px, py, w, h);
         }
 
-        // 5. Jugador
+        // 5. Jugador o Animación de Explosión
         Character pJugador = level.getCharacter();
-        if (pJugador.hasArmor()) {
-            g2d.setColor(Color.GREEN); // Mostrar armadura si tiene
-        } else if (pJugador instanceof BlueCharacter) {
-            g2d.setColor(Color.CYAN);
-        } else {
+        
+        if (pJugador.isExploding()) {
             g2d.setColor(Color.RED);
+            for (Particle p : pJugador.getFragments()) {
+                int px = offsetX + (int)(p.getPositionX() * TAMANO_CELDA);
+                int py = offsetY + (int)(p.getPositionY() * TAMANO_CELDA);
+                int pw = (int)(p.getWidth() * TAMANO_CELDA);
+                int ph = (int)(p.getHeight() * TAMANO_CELDA);
+                g2d.fillRect(px, py, pw, ph);
+            }
+        } else {
+            if (pJugador.hasArmor()) {
+                g2d.setColor(Color.GREEN); // Mostrar armadura si tiene
+            } else if (pJugador instanceof BlueCharacter) {
+                g2d.setColor(Color.CYAN);
+            } else {
+                g2d.setColor(Color.RED);
+            }
+            
+            int px = offsetX + (int)(pJugador.getPositionX() * TAMANO_CELDA);
+            int py = offsetY + (int)(pJugador.getPositionY() * TAMANO_CELDA);
+            int pw = (int)(pJugador.getWidth() * TAMANO_CELDA);
+            int ph = (int)(pJugador.getHeight() * TAMANO_CELDA);
+            
+            g2d.fillRect(px, py, pw, ph);
+            g2d.setColor(Color.BLACK);
+            g2d.drawRect(px, py, pw, ph);
         }
-        
-        int px = offsetX + (int)(pJugador.getPositionX() * TAMANO_CELDA);
-        int py = offsetY + (int)(pJugador.getPositionY() * TAMANO_CELDA);
-        int pw = (int)(pJugador.getWidth() * TAMANO_CELDA);
-        int ph = (int)(pJugador.getHeight() * TAMANO_CELDA);
-        
-        g2d.fillRect(px, py, pw, ph);
-        g2d.setColor(Color.BLACK);
-        g2d.drawRect(px, py, pw, ph);
     }
 }

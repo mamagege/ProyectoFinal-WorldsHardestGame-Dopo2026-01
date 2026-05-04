@@ -1,5 +1,8 @@
 package domain;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Representa al personaje controlado por el jugador.
  * 
@@ -13,11 +16,17 @@ public abstract class Character extends Alive {
     // Para movimiento fluido
     protected double velocityX = 0;
     protected double velocityY = 0;
+    
+    // Game Feel: Explosión
+    private boolean isExploding;
+    private List<Particle> fragments;
 
     public Character(double positionX, double positionY, double width, double height, double speed) {
         super(positionX, positionY, width, height, speed, 'N'); // 'N' significa Ninguna dirección
         this.deaths = 0;
         this.hasArmor = false;
+        this.isExploding = false;
+        this.fragments = new ArrayList<>();
     }
 
     public int getDeaths() { return deaths; }
@@ -40,5 +49,39 @@ public abstract class Character extends Alive {
     public void updatePosition() {
         positionX += velocityX;
         positionY += velocityY;
+    }
+    
+    public boolean isExploding() { return isExploding; }
+    public List<Particle> getFragments() { return fragments; }
+
+    public void triggerExplosion() {
+        this.isExploding = true;
+        this.fragments.clear();
+        int numParticles = 8;
+        double angleStep = (Math.PI * 2) / numParticles;
+        for (int i = 0; i < numParticles; i++) {
+            double angle = i * angleStep;
+            double speedMod = Alive.BASE_SPEED * 1.0; // Velocidad reducida para menor radio
+            double vx = Math.cos(angle) * speedMod;
+            double vy = Math.sin(angle) * speedMod;
+            // Tiempo de vida reducido (15 frames = 1/4 de segundo) para animación más rápida
+            fragments.add(new Particle(getCenterX() - 0.125, getCenterY() - 0.125, vx, vy, 15));
+        }
+    }
+
+    public void updateExplosion() {
+        if (!isExploding) return;
+        
+        boolean anyAlive = false;
+        for (Particle p : fragments) {
+            p.update();
+            if (p.getLifeTime() > 0) {
+                anyAlive = true;
+            }
+        }
+        
+        if (!anyAlive) {
+            isExploding = false;
+        }
     }
 }
