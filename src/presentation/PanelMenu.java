@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Representa el menú de inicio del juego con efecto Glitch alternante.
+ * Representa el menú de inicio del juego con una transición cinemática.
  * 
  * @author Oscar Lasso - Juan Gaitan
  * @version 2026
@@ -19,20 +19,30 @@ import java.util.List;
 public class PanelMenu extends JPanel {
     private VentanaPrincipal ventana;
 
+    // Estados del Menú
+    public enum MenuAnimationState {
+        NORMAL,
+        GLITCH_TRANSITION,
+        MACABRE,
+        NORMALIZATION_TRANSITION
+    }
+
     // Recursos
     private Image backgroundImage;
-    private Image glitchBackgroundImage;
+    private Image macabreBackgroundImage;
     private Image normalImage; // estrella.png
-    private Image glitchImage; // calavera.png
+    private Image macabreImage; // Estrella_macabra.png
     private Font normalFont; // Luvable.ttf
-    private Font glitchFont; // HorrorCorps.ttf
+    private Font macabreFont; // HorrorCorps.ttf
 
     // Animación y Estado
+    private MenuAnimationState currentState = MenuAnimationState.NORMAL;
     private Timer animationTimer;
+    private Timer stateCycleTimer;
     private long startTime;
-    private boolean isGlitchActive = false;
-    private Timer glitchTimer;
-    private Timer fastGlitchTimer;
+    private long glitchStartTime;
+    private long macabreStartTime;
+    private int transitionDuration;
 
     // Contenedor de botones
     private List<JButton> menuButtons = new ArrayList<>();
@@ -43,16 +53,16 @@ public class PanelMenu extends JPanel {
         // 1. Carga de Recursos (Fuentes e Imágenes)
         try {
             backgroundImage = ImageIO.read(new File("src/resources/images/fondo_arcoiris.png"));
-            glitchBackgroundImage = ImageIO.read(new File("src/resources/images/fondo_muro.png"));
+            macabreBackgroundImage = ImageIO.read(new File("src/resources/images/fondo_macabro.png"));
         } catch (IOException e) {
             System.err.println("Advertencia: No se pudieron cargar los fondos");
         }
 
         try {
             normalImage = ImageIO.read(new File("src/resources/images/estrella.png"));
-            glitchImage = ImageIO.read(new File("src/resources/images/calavera.png"));
+            macabreImage = ImageIO.read(new File("src/resources/images/Estrella_macabra.png"));
         } catch (IOException e) {
-            System.err.println("Advertencia: No se pudieron cargar estrella.png o calavera.png");
+            System.err.println("Advertencia: No se pudo cargar estrella.png o Estrella_macabra.png");
         }
 
         try {
@@ -65,10 +75,10 @@ public class PanelMenu extends JPanel {
 
         try {
             File fontHorror = new File("src/resources/fonts/HorrorCorps.ttf");
-            glitchFont = Font.createFont(Font.TRUETYPE_FONT, fontHorror).deriveFont(60f);
+            macabreFont = Font.createFont(Font.TRUETYPE_FONT, fontHorror).deriveFont(60f);
         } catch (FontFormatException | IOException e) {
             System.err.println("Advertencia: No se pudo cargar HorrorCorps.ttf");
-            glitchFont = new Font(Font.SANS_SERIF, Font.BOLD, 60);
+            macabreFont = new Font(Font.SANS_SERIF, Font.BOLD, 60);
         }
 
         // 2. Configurar Layout
@@ -102,7 +112,7 @@ public class PanelMenu extends JPanel {
         buttonPanel.add(btnContinuar);
         buttonPanel.add(btnSalir);
 
-        // Registrar botones para actualizarlos globalmente si es necesario
+        // Registrar botones para actualizarlos globalmente
         menuButtons.add(btnNuevaPartida);
         menuButtons.add(btnOpciones);
         menuButtons.add(btnContinuar);
@@ -110,25 +120,8 @@ public class PanelMenu extends JPanel {
 
         add(buttonPanel, gbc);
 
-        // 4. Lógica de Estado y Temporizadores
-        fastGlitchTimer = new Timer(1150, e -> { // Dura 1 segundo más (1150ms)
-            isGlitchActive = false;
-            repaint(); // Redibuja el panel y por ende los botones transparentes
-            for (JButton btn : menuButtons) {
-                btn.repaint(); // Asegurar repintado individual de los botones
-            }
-        });
-        fastGlitchTimer.setRepeats(false);
-
-        glitchTimer = new Timer(2500, e -> { // ~2.5s entre parpadeos
-            isGlitchActive = true;
-            repaint();
-            for (JButton btn : menuButtons) {
-                btn.repaint();
-            }
-            fastGlitchTimer.start();
-        });
-        glitchTimer.start();
+        // 4. Lógica de Ciclo de Estados
+        setupStateCycle();
 
         // Iniciar timer para la animación a 60 FPS (~16ms)
         startTime = System.currentTimeMillis();
@@ -136,112 +129,337 @@ public class PanelMenu extends JPanel {
         animationTimer.start();
     }
 
+    /**
+     * Configura el ciclo de temporizadores para alternar entre los estados:
+     * NORMAL (5s) -> LIGHTNING_FLASH (200ms) -> MACABRE (2s) -> Repeat
+     */
+    private void setupStateCycle() {
+        stateCycleTimer = new Timer(3000, null);
+        stateCycleTimer.addActionListener(e -> {
+            if (currentState == MenuAnimationState.NORMAL) {
+                currentState = MenuAnimationState.GLITCH_TRANSITION;
+                glitchStartTime = System.currentTimeMillis();
+                transitionDuration = 3000; // La Corrosión Entrópica dura 3s
+                stateCycleTimer.setInitialDelay(transitionDuration);
+                stateCycleTimer.restart();
+            } else if (currentState == MenuAnimationState.GLITCH_TRANSITION) {
+                currentState = MenuAnimationState.MACABRE;
+                macabreStartTime = System.currentTimeMillis();
+                stateCycleTimer.setInitialDelay(2000);
+                stateCycleTimer.restart();
+            } else if (currentState == MenuAnimationState.MACABRE) {
+                currentState = MenuAnimationState.NORMALIZATION_TRANSITION;
+                glitchStartTime = System.currentTimeMillis(); // Reutilizar para tiempo de restauración
+                transitionDuration = 2000; // 2s para restaurar
+                stateCycleTimer.setInitialDelay(transitionDuration);
+                stateCycleTimer.restart();
+            } else if (currentState == MenuAnimationState.NORMALIZATION_TRANSITION) {
+                currentState = MenuAnimationState.NORMAL;
+                stateCycleTimer.setInitialDelay(3000);
+                stateCycleTimer.restart();
+            }
+            repaint();
+            for (JButton btn : menuButtons) {
+                btn.repaint();
+            }
+        });
+        stateCycleTimer.start();
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-
         Graphics2D g2d = (Graphics2D) g.create();
 
-        // Renderizado de alta calidad (Anti-aliasing activado)
+        // Renderizado de alta calidad
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         String title = "THE DOPO HARDEST GAME";
 
-        // 5. Renderizado Condicional
-        if (!isGlitchActive) {
-            // ESTADO NORMAL
-            if (backgroundImage != null) {
-                g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
-            } else {
-                g2d.setColor(new Color(15, 15, 15));
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-            }
-
-            if (normalImage != null) {
-                long elapsedTime = System.currentTimeMillis() - startTime;
-                double amplitud = 8.0;
-                double velocidad = 400.0;
-                int yOffset = (int) (Math.sin(elapsedTime / velocidad) * amplitud);
-
-                int drawHeight = 220;
-                int drawWidth = (normalImage.getWidth(null) * drawHeight) / Math.max(1, normalImage.getHeight(null));
-
-                int x = (getWidth() - drawWidth) / 2;
-                int y = 40 + yOffset;
-                g2d.drawImage(normalImage, x, y, drawWidth, drawHeight, this);
-            }
-
-            // Título Normal: Luvable.ttf, Blanco con relieve Negro
-            g2d.setFont(normalFont);
-            FontMetrics fm = g2d.getFontMetrics();
-            int startX = (getWidth() - fm.stringWidth(title)) / 2;
-            int textY = 320;
-
-            // Relieve negro (8 direcciones usando grosor de 2px para mayor visibilidad)
-            g2d.setColor(Color.BLACK);
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dy = -2; dy <= 2; dy++) {
-                    if (dx != 0 || dy != 0) {
-                        g2d.drawString(title, startX + dx, textY + dy);
-                    }
-                }
-            }
-            // Texto principal blanco
-            g2d.setColor(Color.WHITE);
-            g2d.drawString(title, startX, textY);
-
-        } else {
-            // ESTADO GLITCH
-            if (glitchBackgroundImage != null) {
-                g2d.drawImage(glitchBackgroundImage, 0, 0, getWidth(), getHeight(), this);
-            } else {
-                g2d.setColor(new Color(15, 0, 0)); // Fondo contrastante/oscuro fallback
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-            }
-
-            // Estática macabra sutil
-            g2d.setColor(new Color(0, 0, 0, 180));
-            for (int i = 0; i < 40; i++) {
-                g2d.fillRect((int) (Math.random() * getWidth()), (int) (Math.random() * getHeight()),
-                        (int) (Math.random() * getWidth()), (int) (Math.random() * 15));
-            }
-
-            if (glitchImage != null) {
-                int drawHeight = 250;
-                int drawWidth = (glitchImage.getWidth(null) * drawHeight) / Math.max(1, glitchImage.getHeight(null));
-                int x = (getWidth() - drawWidth) / 2 + (int) (Math.random() * 30 - 15);
-                int y = 50 + (int) (Math.random() * 20 - 10);
-                g2d.drawImage(glitchImage, x, y, drawWidth, drawHeight, this);
-            }
-
-            // Título Glitch: HorrorCorps.ttf, BOLD, Blanco puro sin relieve
-            g2d.setFont(glitchFont.deriveFont(Font.BOLD, 60f));
-            FontMetrics fm = g2d.getFontMetrics();
-            int startX = (getWidth() - fm.stringWidth(title)) / 2 + (int) (Math.random() * 20 - 10);
-            int textY = 320 + (int) (Math.random() * 10 - 5);
-
-            g2d.setColor(Color.WHITE);
-            g2d.drawString(title, startX, textY);
+        // Renderizado Condicional basado en el Estado
+        if (currentState == MenuAnimationState.NORMAL) {
+            renderNormal(g2d, title);
+        } else if (currentState == MenuAnimationState.GLITCH_TRANSITION) {
+            renderGlitch(g2d, title);
+        } else if (currentState == MenuAnimationState.MACABRE) {
+            renderMacabre(g2d, title);
+        } else if (currentState == MenuAnimationState.NORMALIZATION_TRANSITION) {
+            renderNormalization(g2d, title);
         }
 
         g2d.dispose();
     }
 
+    private void renderNormal(Graphics2D g2d, String title) {
+        // Fondo Arcoiris
+        if (backgroundImage != null) {
+            g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+        } else {
+            g2d.setColor(new Color(15, 15, 15));
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+        }
+
+        // Estrella Flotante
+        if (normalImage != null) {
+            long elapsedTime = System.currentTimeMillis() - startTime;
+            double amplitud = 8.0;
+            double velocidad = 400.0;
+            int yOffset = (int) (Math.sin(elapsedTime / velocidad) * amplitud);
+
+            int drawHeight = 220;
+            int drawWidth = (normalImage.getWidth(null) * drawHeight) / Math.max(1, normalImage.getHeight(null));
+
+            int x = (getWidth() - drawWidth) / 2;
+            int y = 40 + yOffset;
+            g2d.drawImage(normalImage, x, y, drawWidth, drawHeight, this);
+        }
+
+        // Título con fuente Luvable y relieve
+        g2d.setFont(normalFont);
+        FontMetrics fm = g2d.getFontMetrics();
+        int startX = (getWidth() - fm.stringWidth(title)) / 2;
+        int textY = 320;
+
+        g2d.setColor(Color.BLACK);
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dy = -2; dy <= 2; dy++) {
+                if (dx != 0 || dy != 0) {
+                    g2d.drawString(title, startX + dx, textY + dy);
+                }
+            }
+        }
+        g2d.setColor(Color.WHITE);
+        g2d.drawString(title, startX, textY);
+    }
+
+    private void renderGlitch(Graphics2D g2d, String title) {
+        long currentTime = System.currentTimeMillis();
+        double progress = Math.max(0.0, Math.min(1.0, (double) (currentTime - glitchStartTime) / transitionDuration));
+        double intensity = progress; // De 0.0 a 1.0
+
+        // 1. Dibujar fondo base (suavizado entre Normal y Macabre hasta el final)
+        float alphaMacabre = (float) Math.max(0, Math.min(1.0, (progress - 0.3) / 0.7)); // Empieza a los 30% y termina al 100%
+        g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+        if (alphaMacabre > 0) {
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphaMacabre));
+            g2d.drawImage(macabreBackgroundImage, 0, 0, getWidth(), getHeight(), this);
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+        }
+
+        // 2. Dibujar Estrellas (Interpolación de tamaño, posición y transparencia)
+        if (normalImage != null && macabreImage != null) {
+            long elapsedTime = System.currentTimeMillis() - startTime;
+            double amplitud = 8.0;
+            double velocidad = 400.0;
+            int yOffset = (int) (Math.sin(elapsedTime / velocidad) * amplitud);
+
+            // Interpolación de valores
+            int currentHeight = (int) (220 + (300 - 220) * progress);
+            int currentY = (int) (40 + (20 - 40) * progress) + yOffset;
+            
+            // 1. Dibujar Estrella Normal Fragmentándose
+            if (progress < 0.9) {
+                float fragAlpha = (progress > 0.6) ? (float)(1.0 - (progress - 0.6)/0.3) : 1.0f;
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0, fragAlpha)));
+                
+                int drawWidthN = (normalImage.getWidth(null) * currentHeight) / Math.max(1, normalImage.getHeight(null));
+                int slices = 10;
+                int sliceH = currentHeight / slices;
+                for (int i = 0; i < slices; i++) {
+                    // Desplazamiento explosivo hacia afuera
+                    int fragOffset = (int) (Math.random() * 50 * progress);
+                    int xFrag = (getWidth() - drawWidthN) / 2 + (Math.random() > 0.5 ? fragOffset : -fragOffset);
+                    
+                    g2d.drawImage(normalImage, xFrag, currentY + i * sliceH, xFrag + drawWidthN, currentY + (i + 1) * sliceH,
+                            0, i * (normalImage.getHeight(null)/slices), normalImage.getWidth(null), (i + 1) * (normalImage.getHeight(null)/slices), this);
+                }
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+            }
+
+            // 2. Estrella Macabra (Ensamblándose / Cross-fade)
+            if (alphaMacabre > 0) {
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphaMacabre));
+                int drawWidthM = (macabreImage.getWidth(null) * currentHeight) / Math.max(1, macabreImage.getHeight(null));
+                int xM = (getWidth() - drawWidthM) / 2;
+                // Pequeña vibración mientras se estabiliza
+                int shakeM = (int) (Math.random() * 5 * (1.0 - progress));
+                g2d.drawImage(macabreImage, xM + shakeM, currentY, drawWidthM, currentHeight, this);
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+            }
+        }
+
+        // 3. Glitch Cromático y Vibración (Se apaga suavemente al final)
+        int shake = (int) (Math.random() * 10 * (1.0 - progress)); 
+        if (progress < 0.98) {
+            float glitchAlpha = (progress > 0.7) ? (float)(1.0 - (progress - 0.7)/0.3) : 1.0f;
+            renderRGBSplit(g2d, title, (int)(15 * (1.0 - progress)), Math.max(0, glitchAlpha));
+        }
+
+        // 4. Distorsión por Bloques / "Melting" (Se desvanece al final)
+        float distortionAlpha = (progress > 0.75) ? (float)(1.0 - (progress - 0.75)/0.25) : 1.0f;
+        if (progress > 0.4 && distortionAlpha > 0) {
+            int blockCount = (int) (100 * (1.0 - progress) * distortionAlpha);
+            for (int i = 0; i < blockCount; i++) {
+                int bw = (int) (Math.random() * 80 * (1.0 - progress));
+                int bh = (int) (Math.random() * 40 * (1.0 - progress));
+                int bx = (int) (Math.random() * getWidth());
+                int by = (int) (Math.random() * getHeight());
+                
+                // Bloques con transparencia progresiva
+                g2d.setColor(Math.random() > 0.3 ? new Color(0, 0, 0, (int)(255 * distortionAlpha)) 
+                                                 : new Color(150, 0, 0, (int)(180 * distortionAlpha)));
+                g2d.fillRect(bx, by, bw, bh);
+            }
+        }
+
+        // Ruido estático fino (se apaga gradualmente)
+        if (progress < 0.98) {
+            g2d.setColor(new Color(255, 255, 255, (int)(30 * (1.0 - progress) * distortionAlpha)));
+            for (int i = 0; i < 30; i++) {
+                g2d.drawLine(0, (int)(Math.random()*getHeight()), getWidth(), (int)(Math.random()*getHeight()));
+            }
+        }
+    }
+
+    private void renderRGBSplit(Graphics2D g2d, String title, int offset, float alpha) {
+        g2d.setFont(normalFont);
+        FontMetrics fm = g2d.getFontMetrics();
+        int startX = (getWidth() - fm.stringWidth(title)) / 2;
+        int textY = 320;
+
+        Composite oldComp = g2d.getComposite();
+        if (alpha < 1.0f) g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+
+        // Canal Rojo
+        g2d.setColor(new Color(255, 0, 0, 120));
+        g2d.drawString(title, startX - offset, textY + (int)(Math.random()*4));
+        
+        // Canal Azul
+        g2d.setColor(new Color(0, 0, 255, 120));
+        g2d.drawString(title, startX + offset, textY - (int)(Math.random()*4));
+
+        // Blanco principal
+        g2d.setColor(Color.WHITE);
+        g2d.drawString(title, startX, textY);
+
+        g2d.setComposite(oldComp);
+    }
+
+    private void renderNormalization(Graphics2D g2d, String title) {
+        long currentTime = System.currentTimeMillis();
+        double progress = Math.max(0.0, Math.min(1.0, (double) (currentTime - glitchStartTime) / transitionDuration));
+        
+        // Fondo: Cross-fade inverso (Macabre -> Normal)
+        float alphaNormal = (float) progress;
+        g2d.drawImage(macabreBackgroundImage, 0, 0, getWidth(), getHeight(), this);
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphaNormal));
+        g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+
+        // Estrella: Cross-fade e interpolación inversa
+        if (normalImage != null && macabreImage != null) {
+            long elapsedTime = System.currentTimeMillis() - startTime;
+            double amplitud = 8.0;
+            double velocidad = 400.0;
+            int yOffset = (int) (Math.sin(elapsedTime / velocidad) * amplitud);
+
+            int currentHeight = (int) (300 + (220 - 300) * progress);
+            int currentY = (int) (20 + (40 - 20) * progress) + yOffset;
+            
+            // Estrella Macabra
+            int drawWidthM = (macabreImage.getWidth(null) * currentHeight) / Math.max(1, macabreImage.getHeight(null));
+            int xM = (getWidth() - drawWidthM) / 2;
+            g2d.drawImage(macabreImage, xM, currentY, drawWidthM, currentHeight, this);
+
+            // Estrella Normal (Aparece suavemente)
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphaNormal));
+            int drawWidthN = (normalImage.getWidth(null) * currentHeight) / Math.max(1, normalImage.getHeight(null));
+            int xN = (getWidth() - drawWidthN) / 2;
+            g2d.drawImage(normalImage, xN, currentY, drawWidthN, currentHeight, this);
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+        }
+
+        // Título: Recuperación de brillo
+        g2d.setFont(normalFont);
+        FontMetrics fm = g2d.getFontMetrics();
+        int startX = (getWidth() - fm.stringWidth(title)) / 2;
+        int textY = 320;
+        g2d.setColor(Color.WHITE);
+        g2d.drawString(title, startX, textY);
+
+        // Barrido de Luz Purificador (Efecto de escaneo blanco)
+        g2d.setColor(new Color(255, 255, 255, (int)(100 * (1.0 - progress))));
+        int sweepY = (int) (progress * getHeight());
+        g2d.fillRect(0, sweepY, getWidth(), 20);
+    }
+
+    private void renderMacabre(Graphics2D g2d, String title) {
+        long currentTime = System.currentTimeMillis();
+        float entryAlpha = Math.min(1.0f, (currentTime - macabreStartTime) / 500f); // Fade-in de 500ms
+
+        // Nuevo Fondo Macabro
+        if (macabreBackgroundImage != null) {
+            g2d.drawImage(macabreBackgroundImage, 0, 0, getWidth(), getHeight(), this);
+        } else {
+            g2d.setColor(new Color(15, 0, 0));
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+        }
+
+        // Aplicar transparencia de entrada a los elementos dinámicos
+        Composite oldComp = g2d.getComposite();
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, entryAlpha));
+
+        // Estrella Macabra Flotante
+        if (macabreImage != null) {
+            long elapsedTime = System.currentTimeMillis() - startTime;
+            double amplitud = 8.0;
+            double velocidad = 400.0;
+            int yOffset = (int) (Math.sin(elapsedTime / velocidad) * amplitud);
+
+            int drawHeight = 300; // Aumentado de 220 a 300
+            int drawWidth = (macabreImage.getWidth(null) * drawHeight) / Math.max(1, macabreImage.getHeight(null));
+
+            int x = (getWidth() - drawWidth) / 2;
+            int y = 20 + yOffset; // Subir un poco (de 40 a 20) para compensar el mayor tamaño
+            g2d.drawImage(macabreImage, x, y, drawWidth, drawHeight, this);
+        }
+
+        // Título con fuente Luvable y relieve (igual al Menú 1)
+        g2d.setFont(normalFont);
+        FontMetrics fm = g2d.getFontMetrics();
+        int startX = (getWidth() - fm.stringWidth(title)) / 2;
+        int textY = 320;
+
+        // Relieve Negro
+        g2d.setColor(Color.BLACK);
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dy = -2; dy <= 2; dy++) {
+                if (dx != 0 || dy != 0) {
+                    g2d.drawString(title, startX + dx, textY + dy);
+                }
+            }
+        }
+        // Texto principal blanco
+        g2d.setColor(Color.WHITE);
+        g2d.drawString(title, startX, textY);
+
+        g2d.setComposite(oldComp);
+    }
+
     /**
-     * Crea un botón dinámico sobrescribiendo su paintComponent para adaptarse
-     * al estado del glitch internamente, encapsulando la lógica visual.
+     * Crea un botón que adapta su visualización al estado actual del menú.
      */
     private JButton crearBoton(String texto) {
         JButton boton = new JButton(texto) {
             @Override
             public Dimension getPreferredSize() {
-                // Prevenir cortes dándole al Layout el tamaño real del texto
-                FontMetrics fm = getFontMetrics(glitchFont != null ? glitchFont.deriveFont(Font.BOLD, 36f)
-                        : new Font(Font.SANS_SERIF, Font.BOLD, 36));
-                int w = fm.stringWidth(getText()) + 40; // 40px de padding horizontal
-                int h = fm.getHeight() + 20; // 20px padding vertical
+                // Usar siempre la fuente Normal para mantener el tamaño constante
+                Font f = (normalFont != null) ? normalFont.deriveFont(Font.BOLD, 36f) : new Font(Font.SANS_SERIF, Font.BOLD, 36);
+                FontMetrics fm = getFontMetrics(f);
+                int w = fm.stringWidth(getText()) + 40;
+                int h = fm.getHeight() + 20;
                 return new Dimension(w, h);
             }
 
@@ -253,47 +471,60 @@ public class PanelMenu extends JPanel {
 
                 String text = getText();
 
-                if (!isGlitchActive) {
-                    // Estado Normal: Luvable.ttf, blanco con relieve negro
+                if (currentState == MenuAnimationState.NORMAL) {
                     g2d.setFont(normalFont.deriveFont(32f));
-                    FontMetrics fm = g2d.getFontMetrics();
-                    int w = fm.stringWidth(text);
-                    int h = fm.getAscent();
-                    int x = (getWidth() - w) / 2;
-                    int y = (getHeight() + h) / 2 - 4;
+                    FontMetrics fmN = g2d.getFontMetrics();
+                    int xN = (getWidth() - fmN.stringWidth(text)) / 2;
+                    int yN = (getHeight() + fmN.getAscent()) / 2 - 4;
 
-                    // Relieve Negro (más notorio)
+                    // Relieve
                     g2d.setColor(Color.BLACK);
                     for (int dx = -2; dx <= 2; dx++) {
                         for (int dy = -2; dy <= 2; dy++) {
-                            if (dx != 0 || dy != 0) {
-                                g2d.drawString(text, x + dx, y + dy);
-                            }
+                            if (dx != 0 || dy != 0) g2d.drawString(text, xN + dx, yN + dy);
+                        }
+                    }
+                    // Texto principal con Hover
+                    g2d.setColor(getModel().isRollover() ? new Color(255, 50, 50) : Color.WHITE);
+                    g2d.drawString(text, xN, yN);
+                } else if (currentState == MenuAnimationState.GLITCH_TRANSITION) {
+                    // No dibujar texto o dibujar solo ráfagas
+                    if (Math.random() > 0.7) {
+                        g2d.setFont(normalFont.deriveFont(32f));
+                        g2d.setColor(new Color(255, 0, 0, 100));
+                        g2d.drawString(text, (getWidth() - g2d.getFontMetrics().stringWidth(text))/2 + (int)(Math.random()*10-5), getHeight()/2);
+                    }
+                } else if (currentState == MenuAnimationState.MACABRE) {
+                    // Misma fuente que Menú 1 (Luvable)
+                    g2d.setFont(normalFont.deriveFont(32f));
+                    FontMetrics fmM = g2d.getFontMetrics();
+                    int xM = (getWidth() - fmM.stringWidth(text)) / 2;
+                    int yM = (getHeight() + fmM.getAscent()) / 2 - 4;
+                    
+                    // Añadir contorno negro para legibilidad
+                    g2d.setColor(Color.BLACK);
+                    for (int dx = -2; dx <= 2; dx++) {
+                        for (int dy = -2; dy <= 2; dy++) {
+                            if (dx != 0 || dy != 0) g2d.drawString(text, xM + dx, yM + dy);
                         }
                     }
 
-                    // Hover color (Rojo) o Blanco
+                    // Añadir hover para que sean "funcionales" visualmente
                     if (getModel().isRollover()) {
-                        g2d.setColor(new Color(255, 50, 50));
+                        g2d.setColor(new Color(255, 50, 50)); // Rojo en hover
                     } else {
-                        g2d.setColor(Color.WHITE);
+                        g2d.setColor(new Color(220, 220, 220)); // Blanco/Gris claro para contraste
                     }
-                    g2d.drawString(text, x, y);
-
-                } else {
-                    // Estado Glitch: HorrorCorps.ttf, BOLD, Blanco puro, sin relieve
-                    g2d.setFont(glitchFont.deriveFont(Font.BOLD, 36f));
-                    FontMetrics fm = g2d.getFontMetrics();
-                    int w = fm.stringWidth(text);
-                    int h = fm.getAscent();
-                    // Ligero temblor en los botones
-                    int x = (getWidth() - w) / 2 + (int) (Math.random() * 6 - 3);
-                    int y = (getHeight() + h) / 2 - 4 + (int) (Math.random() * 6 - 3);
-
+                    g2d.drawString(text, xM, yM);
+                } else if (currentState == MenuAnimationState.NORMALIZATION_TRANSITION) {
+                    // Los botones ya vuelven a su estilo normal suavemente
+                    g2d.setFont(normalFont.deriveFont(32f));
+                    FontMetrics fmR = g2d.getFontMetrics();
+                    int xR = (getWidth() - fmR.stringWidth(text)) / 2;
+                    int yR = (getHeight() + fmR.getAscent()) / 2 - 4;
                     g2d.setColor(Color.WHITE);
-                    g2d.drawString(text, x, y);
+                    g2d.drawString(text, xR, yR);
                 }
-
                 g2d.dispose();
             }
         };
@@ -305,17 +536,15 @@ public class PanelMenu extends JPanel {
         boton.setAlignmentX(Component.CENTER_ALIGNMENT);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // El hover se maneja a través del getModel().isRollover() en el paintComponent
-        // Añadimos MouseListener para forzar el repintado inmediato al pasar el mouse
         boton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                boton.repaint();
+                if (currentState == MenuAnimationState.NORMAL) boton.repaint();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                boton.repaint();
+                if (currentState == MenuState.NORMAL) boton.repaint();
             }
         });
 
