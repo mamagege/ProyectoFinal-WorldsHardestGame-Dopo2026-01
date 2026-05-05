@@ -7,37 +7,71 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Representa el menú de inicio del juego.
+ * Representa el menú de inicio del juego con efecto Glitch alternante.
  * 
  * @author Oscar Lasso - Juan Gaitan
  * @version 2026
  */
 public class PanelMenu extends JPanel {
     private VentanaPrincipal ventana;
+
+    // Recursos
     private Image backgroundImage;
-    private Image skullImage;
+    private Image glitchBackgroundImage;
+    private Image normalImage; // estrella.png
+    private Image glitchImage; // calavera.png
+    private Font normalFont; // Luvable.ttf
+    private Font glitchFont; // HorrorCorps.ttf
+
+    // Animación y Estado
     private Timer animationTimer;
     private long startTime;
+    private boolean isGlitchActive = false;
+    private Timer glitchTimer;
+    private Timer fastGlitchTimer;
+
+    // Contenedor de botones
+    private List<JButton> menuButtons = new ArrayList<>();
 
     public PanelMenu(VentanaPrincipal ventana) {
         this.ventana = ventana;
-        
-        // Cargar imágenes de las capas
+
+        // 1. Carga de Recursos (Fuentes e Imágenes)
         try {
-            backgroundImage = ImageIO.read(new File("src/resources/images/fondo_muro.png"));
+            backgroundImage = ImageIO.read(new File("src/resources/images/fondo_arcoiris.png"));
+            glitchBackgroundImage = ImageIO.read(new File("src/resources/images/fondo_muro.png"));
         } catch (IOException e) {
-            System.err.println("Advertencia: No se pudo cargar la imagen src/resources/images/fondo_muro.png");
-        }
-        
-        try {
-            skullImage = ImageIO.read(new File("src/resources/images/calavera.png"));
-        } catch (IOException e) {
-            System.err.println("Advertencia: No se pudo cargar la imagen src/resources/images/calavera.png");
+            System.err.println("Advertencia: No se pudieron cargar los fondos");
         }
 
-        // Configurar Layout (GridBagLayout para posicionar botones abajo)
+        try {
+            normalImage = ImageIO.read(new File("src/resources/images/estrella.png"));
+            glitchImage = ImageIO.read(new File("src/resources/images/calavera.png"));
+        } catch (IOException e) {
+            System.err.println("Advertencia: No se pudieron cargar estrella.png o calavera.png");
+        }
+
+        try {
+            File fontLuvable = new File("src/resources/fonts/Luvable.ttf");
+            normalFont = Font.createFont(Font.TRUETYPE_FONT, fontLuvable).deriveFont(60f);
+        } catch (FontFormatException | IOException e) {
+            System.err.println("Advertencia: No se pudo cargar Luvable.ttf");
+            normalFont = new Font(Font.SANS_SERIF, Font.BOLD, 60);
+        }
+
+        try {
+            File fontHorror = new File("src/resources/fonts/HorrorCorps.ttf");
+            glitchFont = Font.createFont(Font.TRUETYPE_FONT, fontHorror).deriveFont(60f);
+        } catch (FontFormatException | IOException e) {
+            System.err.println("Advertencia: No se pudo cargar HorrorCorps.ttf");
+            glitchFont = new Font(Font.SANS_SERIF, Font.BOLD, 60);
+        }
+
+        // 2. Configurar Layout
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -45,14 +79,14 @@ public class PanelMenu extends JPanel {
         gbc.weightx = 1.0;
         gbc.weighty = 1.0;
         gbc.anchor = GridBagConstraints.SOUTH;
-        gbc.insets = new Insets(0, 0, 40, 0); // Margen inferior
+        gbc.insets = new Insets(0, 0, 40, 0);
 
         // Panel contenedor para los botones
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(2, 2, 50, 15)); // 2 filas, 2 columnas, hgap, vgap
-        buttonPanel.setOpaque(false); // Transparente para ver capas inferiores
+        buttonPanel.setLayout(new GridLayout(2, 2, 50, 15));
+        buttonPanel.setOpaque(false);
 
-        // Instanciar botones nuevos
+        // 3. Instanciar botones dinámicos
         JButton btnNuevaPartida = crearBoton("NUEVA PARTIDA");
         JButton btnContinuar = crearBoton("CONTINUAR");
         JButton btnOpciones = crearBoton("OPCIONES");
@@ -62,14 +96,39 @@ public class PanelMenu extends JPanel {
         btnNuevaPartida.addActionListener(e -> ventana.mostrarPanel("JUEGO"));
         btnSalir.addActionListener(e -> System.exit(0));
 
-        // Añadir botones al panel (GridLayout los acomoda fila por fila, de izquierda a derecha)
-        buttonPanel.add(btnNuevaPartida); // Fila 1, Columna 1
-        buttonPanel.add(btnOpciones);     // Fila 1, Columna 2
-        buttonPanel.add(btnContinuar);    // Fila 2, Columna 1
-        buttonPanel.add(btnSalir);        // Fila 2, Columna 2
+        // Añadir botones al panel
+        buttonPanel.add(btnNuevaPartida);
+        buttonPanel.add(btnOpciones);
+        buttonPanel.add(btnContinuar);
+        buttonPanel.add(btnSalir);
 
-        // Añadir contenedor de botones al panel principal
+        // Registrar botones para actualizarlos globalmente si es necesario
+        menuButtons.add(btnNuevaPartida);
+        menuButtons.add(btnOpciones);
+        menuButtons.add(btnContinuar);
+        menuButtons.add(btnSalir);
+
         add(buttonPanel, gbc);
+
+        // 4. Lógica de Estado y Temporizadores
+        fastGlitchTimer = new Timer(1150, e -> { // Dura 1 segundo más (1150ms)
+            isGlitchActive = false;
+            repaint(); // Redibuja el panel y por ende los botones transparentes
+            for (JButton btn : menuButtons) {
+                btn.repaint(); // Asegurar repintado individual de los botones
+            }
+        });
+        fastGlitchTimer.setRepeats(false);
+
+        glitchTimer = new Timer(2500, e -> { // ~2.5s entre parpadeos
+            isGlitchActive = true;
+            repaint();
+            for (JButton btn : menuButtons) {
+                btn.repaint();
+            }
+            fastGlitchTimer.start();
+        });
+        glitchTimer.start();
 
         // Iniciar timer para la animación a 60 FPS (~16ms)
         startTime = System.currentTimeMillis();
@@ -79,117 +138,184 @@ public class PanelMenu extends JPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
-        // Al llamar a super.paintComponent, Swing se encarga de limpiar el panel
         super.paintComponent(g);
-        
+
         Graphics2D g2d = (Graphics2D) g.create();
-        
-        // Renderizado de alta calidad
+
+        // Renderizado de alta calidad (Anti-aliasing activado)
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-        // ---------------------------------------------------------
-        // CAPA 1: Fondo Estático (Z-index más bajo)
-        // ---------------------------------------------------------
-        if (backgroundImage != null) {
-            g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+        String title = "THE DOPO HARDEST GAME";
+
+        // 5. Renderizado Condicional
+        if (!isGlitchActive) {
+            // ESTADO NORMAL
+            if (backgroundImage != null) {
+                g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+            } else {
+                g2d.setColor(new Color(15, 15, 15));
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+            }
+
+            if (normalImage != null) {
+                long elapsedTime = System.currentTimeMillis() - startTime;
+                double amplitud = 8.0;
+                double velocidad = 400.0;
+                int yOffset = (int) (Math.sin(elapsedTime / velocidad) * amplitud);
+
+                int drawHeight = 220;
+                int drawWidth = (normalImage.getWidth(null) * drawHeight) / Math.max(1, normalImage.getHeight(null));
+
+                int x = (getWidth() - drawWidth) / 2;
+                int y = 40 + yOffset;
+                g2d.drawImage(normalImage, x, y, drawWidth, drawHeight, this);
+            }
+
+            // Título Normal: Luvable.ttf, Blanco con relieve Negro
+            g2d.setFont(normalFont);
+            FontMetrics fm = g2d.getFontMetrics();
+            int startX = (getWidth() - fm.stringWidth(title)) / 2;
+            int textY = 320;
+
+            // Relieve negro (8 direcciones usando grosor de 2px para mayor visibilidad)
+            g2d.setColor(Color.BLACK);
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -2; dy <= 2; dy++) {
+                    if (dx != 0 || dy != 0) {
+                        g2d.drawString(title, startX + dx, textY + dy);
+                    }
+                }
+            }
+            // Texto principal blanco
+            g2d.setColor(Color.WHITE);
+            g2d.drawString(title, startX, textY);
+
         } else {
-            g2d.setColor(new Color(15, 15, 15));
-            g2d.fillRect(0, 0, getWidth(), getHeight());
+            // ESTADO GLITCH
+            if (glitchBackgroundImage != null) {
+                g2d.drawImage(glitchBackgroundImage, 0, 0, getWidth(), getHeight(), this);
+            } else {
+                g2d.setColor(new Color(15, 0, 0)); // Fondo contrastante/oscuro fallback
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+            }
+
+            // Estática macabra sutil
+            g2d.setColor(new Color(0, 0, 0, 180));
+            for (int i = 0; i < 40; i++) {
+                g2d.fillRect((int) (Math.random() * getWidth()), (int) (Math.random() * getHeight()),
+                        (int) (Math.random() * getWidth()), (int) (Math.random() * 15));
+            }
+
+            if (glitchImage != null) {
+                int drawHeight = 250;
+                int drawWidth = (glitchImage.getWidth(null) * drawHeight) / Math.max(1, glitchImage.getHeight(null));
+                int x = (getWidth() - drawWidth) / 2 + (int) (Math.random() * 30 - 15);
+                int y = 50 + (int) (Math.random() * 20 - 10);
+                g2d.drawImage(glitchImage, x, y, drawWidth, drawHeight, this);
+            }
+
+            // Título Glitch: HorrorCorps.ttf, BOLD, Blanco puro sin relieve
+            g2d.setFont(glitchFont.deriveFont(Font.BOLD, 60f));
+            FontMetrics fm = g2d.getFontMetrics();
+            int startX = (getWidth() - fm.stringWidth(title)) / 2 + (int) (Math.random() * 20 - 10);
+            int textY = 320 + (int) (Math.random() * 10 - 5);
+
+            g2d.setColor(Color.WHITE);
+            g2d.drawString(title, startX, textY);
         }
-
-        // ---------------------------------------------------------
-        // CAPA 2: Calavera Animada (Z-index medio)
-        // ---------------------------------------------------------
-        if (skullImage != null) {
-            long elapsedTime = System.currentTimeMillis() - startTime;
-            
-            // Animación: Modificar solo 'Y' usando Math.sin
-            double amplitud = 8.0;
-            double velocidad = 400.0;
-            int yOffset = (int) (Math.sin(elapsedTime / velocidad) * amplitud);
-
-            int originalW = skullImage.getWidth(null);
-            int originalH = skullImage.getHeight(null);
-            
-            // Escalar la calavera para que quepa bien en la mitad superior
-            int drawHeight = 220; 
-            int drawWidth = (originalW > 0 && originalH > 0) ? (originalW * drawHeight) / originalH : 220;
-
-            int x = (getWidth() - drawWidth) / 2;
-            int y = 40 + yOffset; // Posición base Y = 40 + animación
-
-            g2d.drawImage(skullImage, x, y, drawWidth, drawHeight, this);
-        }
-
-        // ---------------------------------------------------------
-        // CAPA 3: Texto e Interfaz (Z-index más alto)
-        // ---------------------------------------------------------
-        // Los botones (JButton) se renderizarán automáticamente encima 
-        // de esto gracias a que son componentes hijos de Swing.
-        
-        // Dibujamos el Título mediante código debajo de la calavera
-        String t1 = "THE ";
-        String t2 = "DOPO ";
-        String t3 = "HARDEST GAME";
-
-        Font titleFont = new Font(Font.SANS_SERIF, Font.BOLD, 46);
-        g2d.setFont(titleFont);
-        FontMetrics fm = g2d.getFontMetrics();
-        
-        int w1 = fm.stringWidth(t1);
-        int w2 = fm.stringWidth(t2);
-        int w3 = fm.stringWidth(t3);
-        int totalWidth = w1 + w2 + w3;
-        
-        int startX = (getWidth() - totalWidth) / 2;
-        int textY = 320; // Posición Y del texto (debajo de la calavera)
-
-        // Sombra blanca sutil para resaltar sobre el fondo
-        g2d.setColor(new Color(255, 255, 255, 200));
-        int offset = 2;
-        g2d.drawString(t1, startX + offset, textY + offset);
-        g2d.drawString(t2, startX + w1 + offset, textY + offset);
-        g2d.drawString(t3, startX + w1 + w2 + offset, textY + offset);
-
-        // Texto principal (Negro y Rojo)
-        g2d.setColor(new Color(25, 25, 25)); // Gris muy oscuro / Negro
-        g2d.drawString(t1, startX, textY);
-        
-        g2d.setColor(new Color(200, 20, 20)); // Rojo para "DOPO"
-        g2d.drawString(t2, startX + w1, textY);
-        
-        g2d.setColor(new Color(25, 25, 25)); // Gris muy oscuro / Negro
-        g2d.drawString(t3, startX + w1 + w2, textY);
 
         g2d.dispose();
     }
 
     /**
-     * Método auxiliar para centralizar la configuración visual de los botones.
+     * Crea un botón dinámico sobrescribiendo su paintComponent para adaptarse
+     * al estado del glitch internamente, encapsulando la lógica visual.
      */
     private JButton crearBoton(String texto) {
-        JButton boton = new JButton(texto);
-        boton.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
-        boton.setForeground(new Color(220, 220, 220)); // Gris claro
+        JButton boton = new JButton(texto) {
+            @Override
+            public Dimension getPreferredSize() {
+                // Prevenir cortes dándole al Layout el tamaño real del texto
+                FontMetrics fm = getFontMetrics(glitchFont != null ? glitchFont.deriveFont(Font.BOLD, 36f)
+                        : new Font(Font.SANS_SERIF, Font.BOLD, 36));
+                int w = fm.stringWidth(getText()) + 40; // 40px de padding horizontal
+                int h = fm.getHeight() + 20; // 20px padding vertical
+                return new Dimension(w, h);
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                String text = getText();
+
+                if (!isGlitchActive) {
+                    // Estado Normal: Luvable.ttf, blanco con relieve negro
+                    g2d.setFont(normalFont.deriveFont(32f));
+                    FontMetrics fm = g2d.getFontMetrics();
+                    int w = fm.stringWidth(text);
+                    int h = fm.getAscent();
+                    int x = (getWidth() - w) / 2;
+                    int y = (getHeight() + h) / 2 - 4;
+
+                    // Relieve Negro (más notorio)
+                    g2d.setColor(Color.BLACK);
+                    for (int dx = -2; dx <= 2; dx++) {
+                        for (int dy = -2; dy <= 2; dy++) {
+                            if (dx != 0 || dy != 0) {
+                                g2d.drawString(text, x + dx, y + dy);
+                            }
+                        }
+                    }
+
+                    // Hover color (Rojo) o Blanco
+                    if (getModel().isRollover()) {
+                        g2d.setColor(new Color(255, 50, 50));
+                    } else {
+                        g2d.setColor(Color.WHITE);
+                    }
+                    g2d.drawString(text, x, y);
+
+                } else {
+                    // Estado Glitch: HorrorCorps.ttf, BOLD, Blanco puro, sin relieve
+                    g2d.setFont(glitchFont.deriveFont(Font.BOLD, 36f));
+                    FontMetrics fm = g2d.getFontMetrics();
+                    int w = fm.stringWidth(text);
+                    int h = fm.getAscent();
+                    // Ligero temblor en los botones
+                    int x = (getWidth() - w) / 2 + (int) (Math.random() * 6 - 3);
+                    int y = (getHeight() + h) / 2 - 4 + (int) (Math.random() * 6 - 3);
+
+                    g2d.setColor(Color.WHITE);
+                    g2d.drawString(text, x, y);
+                }
+
+                g2d.dispose();
+            }
+        };
+
         boton.setContentAreaFilled(false);
         boton.setFocusPainted(false);
         boton.setOpaque(false);
-        boton.setBorderPainted(false); // Quitar borde predeterminado
+        boton.setBorderPainted(false);
         boton.setAlignmentX(Component.CENTER_ALIGNMENT);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Efecto hover
+        // El hover se maneja a través del getModel().isRollover() en el paintComponent
+        // Añadimos MouseListener para forzar el repintado inmediato al pasar el mouse
         boton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                boton.setForeground(new Color(220, 20, 20)); // Rojo al hacer hover
+                boton.repaint();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                boton.setForeground(new Color(220, 220, 220)); // Volver al gris claro
+                boton.repaint();
             }
         });
 
