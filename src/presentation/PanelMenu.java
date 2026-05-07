@@ -544,7 +544,7 @@ public class PanelMenu extends JPanel {
 
             @Override
             public void mouseExited(MouseEvent e) {
-                if (currentState == MenuState.NORMAL) boton.repaint();
+                if (currentState == MenuAnimationState.NORMAL) boton.repaint();
             }
         });
 
