@@ -16,6 +16,7 @@ public class Level {
     private List<Wall> walls;
     private List<Checkpoint> checkpoints;
     private Goal goal;
+    private List<Tile> tiles;
     
     private boolean completed;
 
@@ -27,6 +28,7 @@ public class Level {
         this.walls = walls;
         this.checkpoints = checkpoints;
         this.goal = goal;
+        this.tiles = new java.util.ArrayList<>();
         this.completed = false;
     }
 
@@ -70,16 +72,21 @@ public class Level {
     }
 
     private void moveCharacter() {
+        // 1. Mover y validar en X
         double oldX = character.getPositionX();
-        double oldY = character.getPositionY();
-
-        character.updatePosition();
-
-        // Evita el movimiento a través de paredes usando hitboxes
+        character.updatePositionX();
         for (Wall wall : walls) {
             if (CollisionDetector.checkCollision(character, wall)) {
-                // Si choca, deshacemos el movimiento
                 character.setPositionX(oldX);
+                break;
+            }
+        }
+
+        // 2. Mover y validar en Y
+        double oldY = character.getPositionY();
+        character.updatePositionY();
+        for (Wall wall : walls) {
+            if (CollisionDetector.checkCollision(character, wall)) {
                 character.setPositionY(oldY);
                 break;
             }
@@ -138,5 +145,7 @@ public class Level {
     public List<Wall> getWalls() { return walls; }
     public List<Checkpoint> getCheckpoints() { return checkpoints; }
     public Goal getGoal() { return goal; }
+    public List<Tile> getTiles() { return tiles; }
+    public void setTiles(List<Tile> tiles) { this.tiles = tiles; }
     public boolean isCompleted() { return completed; }
 }

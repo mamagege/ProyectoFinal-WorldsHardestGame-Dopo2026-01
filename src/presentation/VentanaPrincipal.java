@@ -46,4 +46,8 @@ public class VentanaPrincipal extends JFrame {
     public PanelJuego getPanelJuego() {
         return panelJuego;
     }
+
+    public GameWHG getGameOrchestrator() {
+        return gameOrchestrator;
+    }
 }

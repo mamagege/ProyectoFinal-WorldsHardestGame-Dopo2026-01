@@ -103,7 +103,10 @@ public class PanelMenu extends JPanel {
         JButton btnSalir = crearBoton("SALIR");
 
         // Configurar acciones
-        btnNuevaPartida.addActionListener(e -> ventana.mostrarPanel("JUEGO"));
+        btnNuevaPartida.addActionListener(e -> {
+            ventana.getGameOrchestrator().resetGame();
+            ventana.mostrarPanel("JUEGO");
+        });
         btnSalir.addActionListener(e -> System.exit(0));
 
         // Añadir botones al panel

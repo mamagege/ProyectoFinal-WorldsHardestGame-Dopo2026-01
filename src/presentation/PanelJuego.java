@@ -58,6 +58,7 @@ public class PanelJuego extends JPanel {
         Level level = gameOrchestrator.getCurrentLevel();
         if (level != null) {
             labelMuertes.setText("Deaths: " + level.getCharacter().getDeaths() + "  ");
+            labelNivel.setText("Nivel: " + (gameOrchestrator.getCurrentLevelIndex() + 1) + "/30");
         }
         repaint();
     }
@@ -67,12 +68,32 @@ public class PanelJuego extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        int offsetX = 100;
-        int offsetY = 50;
-
         Level level = gameOrchestrator.getCurrentLevel();
         if (level == null)
             return;
+
+        int maxX = 0;
+        int maxY = 0;
+        for (Wall w : level.getWalls()) {
+            if (w.getPositionX() > maxX)
+                maxX = (int) w.getPositionX();
+            if (w.getPositionY() > maxY)
+                maxY = (int) w.getPositionY();
+        }
+        int mapWidth = (maxX + 1) * TAMANO_CELDA;
+        int mapHeight = (maxY + 1) * TAMANO_CELDA;
+
+        int offsetX = Math.max(20, (getWidth() - mapWidth) / 2);
+        int offsetY = Math.max(50, (getHeight() - mapHeight) / 2);
+
+        // 0. Baldosas (Tiles) del Damero
+        for (Tile tile : level.getTiles()) {
+            g2d.setColor(Color.decode(tile.getColorHex()));
+            g2d.fillRect(offsetX + (int) (tile.getPositionX() * TAMANO_CELDA),
+                    offsetY + (int) (tile.getPositionY() * TAMANO_CELDA),
+                    (int) (tile.getWidth() * TAMANO_CELDA),
+                    (int) (tile.getHeight() * TAMANO_CELDA));
+        }
 
         // 1. Zonas Seguras
         g2d.setColor(Color.decode("#B5E61D"));

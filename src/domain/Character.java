@@ -47,9 +47,20 @@ public abstract class Character extends Alive {
 
     @Override
     public void updatePosition() {
+        updatePositionX();
+        updatePositionY();
+    }
+
+    public void updatePositionX() {
         positionX += velocityX;
+    }
+
+    public void updatePositionY() {
         positionY += velocityY;
     }
+    
+    public double getVelocityX() { return velocityX; }
+    public double getVelocityY() { return velocityY; }
     
     public boolean isExploding() { return isExploding; }
     public List<Particle> getFragments() { return fragments; }
