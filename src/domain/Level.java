@@ -119,6 +119,9 @@ public class Level {
             character.setPositionX(initial.getPositionX());
             character.setPositionY(initial.getPositionY());
         }
+        for (Coin coin : coins) {
+            coin.reset();
+        }
     }
 
     private boolean allCoinsCollected() {

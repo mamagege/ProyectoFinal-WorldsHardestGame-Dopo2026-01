@@ -32,12 +32,12 @@ public class LevelTest {
         wall = new Wall(1.0, 0.0, 1.0, 1.0);
         obstacle = new BasicObstacle(0.0, 2.0, 'R', true);
         coin = new Coin(2.0, 2.0, 1.0, 1.0);
-        
+
         List<Checkpoint> checkpoints = Arrays.asList(checkpoint);
         List<Wall> walls = Arrays.asList(wall);
         List<Obstacle> obstacles = Arrays.asList(obstacle);
         List<Coin> coins = Arrays.asList(coin);
-        
+
         level = new Level(character, obstacles, coins, walls, checkpoints, goal);
     }
 
@@ -57,18 +57,20 @@ public class LevelTest {
         Element rect = new RedCharacter(0.0, 0.0);
         // Obstáculo (Círculo) que apenas roza la esquina
         Element circle = new BasicObstacle(1.0, 1.0, 'R', true);
-        
-        // El centro del círculo en (1.5, 1.5), radio 0.5. 
+
+        // El centro del círculo en (1.5, 1.5), radio 0.5.
         // El punto del rectángulo más cercano es (1.0, 1.0).
         // Distancia euclidiana: sqrt(0.5^2 + 0.5^2) = sqrt(0.5) = 0.707
         // El radio es 0.5. 0.707 no es menor que 0.5, así que NO colisionan.
-        assertFalse(CollisionDetector.checkCollision(circle, rect), "No deben colisionar de esquina (distancia > radio)");
-        
+        assertFalse(CollisionDetector.checkCollision(circle, rect),
+                "No deben colisionar de esquina (distancia > radio)");
+
         // Acercar el círculo a (0.7, 0.7), centro (1.2, 1.2).
         // Punto más cercano (1.0, 1.0). Distancia: sqrt(0.2^2 + 0.2^2) = 0.28
         // Radio: 0.5. Como 0.28 < 0.5, SÍ colisionan.
         Element circleClose = new BasicObstacle(0.7, 0.7, 'R', true);
-        assertTrue(CollisionDetector.checkCollision(circleClose, rect), "Deben colisionar, el círculo penetra la esquina");
+        assertTrue(CollisionDetector.checkCollision(circleClose, rect),
+                "Deben colisionar, el círculo penetra la esquina");
     }
 
     @Test
@@ -77,7 +79,7 @@ public class LevelTest {
         character.setPositionX(0.9);
         character.setVelocity(0.2, 0); // Esto lo llevaría a 1.1, solapando la pared (1.0)
         level.tick();
-        
+
         // Debería haberse deshecho el movimiento (regresa a 0.9)
         assertEquals(0.9, character.getPositionX(), 0.001, "La posición X no debe penetrar la pared");
     }
@@ -85,15 +87,16 @@ public class LevelTest {
     @Test
     public void greenCharacterArmorLogic() {
         GreenCharacter greenChar = new GreenCharacter(0.0, 2.0);
-        Level greenLevel = new Level(greenChar, Arrays.asList(obstacle), Arrays.asList(coin), Arrays.asList(wall), Arrays.asList(checkpoint), goal);
-        
+        Level greenLevel = new Level(greenChar, Arrays.asList(obstacle), Arrays.asList(coin), Arrays.asList(wall),
+                Arrays.asList(checkpoint), goal);
+
         // Forzamos colisión
         greenChar.setPositionX(obstacle.getPositionX());
         greenChar.setPositionY(obstacle.getPositionY());
-        
+
         int initialDeaths = greenChar.getDeaths();
         greenLevel.tick(); // Evalúa colisiones
-        
+
         assertEquals(initialDeaths, greenChar.getDeaths(), "No debe morir con armadura");
         assertFalse(greenChar.hasArmor(), "Debe perder la armadura");
         assertEquals(0.7 * Alive.BASE_SPEED, greenChar.getSpeed(), 0.001, "Su velocidad debe reducirse");
@@ -105,10 +108,32 @@ public class LevelTest {
         character.setPositionY(2.0); // Encima de la moneda
         level.tick();
         assertTrue(coin.isCollected(), "La moneda debe estar recolectada");
-        
+
         character.setPositionX(5.0);
         character.setPositionY(5.0); // Encima de la meta
         level.tick();
         assertTrue(level.isCompleted(), "El nivel debe estar completado");
+    }
+
+    @Test
+    public void dyingResetsCoins() {
+        // Recolectar la moneda
+        character.setPositionX(2.0);
+        character.setPositionY(2.0);
+        level.tick();
+        assertTrue(coin.isCollected(), "La moneda debe recolectarse primero");
+
+        // Simular colisión con un obstáculo para morir
+        character.setPositionX(obstacle.getPositionX());
+        character.setPositionY(obstacle.getPositionY());
+        level.tick(); // Detona la muerte (empieza la explosión)
+
+        // Avanzar el ciclo hasta que termine la explosión y se restablezca la posición
+        while (character.isExploding()) {
+            level.tick();
+        }
+        level.tick(); // Para que finalice la lógica después de la animación
+
+        assertFalse(coin.isCollected(), "La moneda debe estar des-recolectada después de morir");
     }
 }

@@ -16,6 +16,7 @@ public class Coin extends Element {
 
     public boolean isCollected() { return collected; }
     public void collect() { this.collected = true; }
+    public void reset() { this.collected = false; }
 
     @Override
     public boolean isCircular() {

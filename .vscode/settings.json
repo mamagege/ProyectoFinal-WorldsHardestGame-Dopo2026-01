@@ -1,0 +1,17 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/c:\\Users\\ASUS\\Downloads\\hoja_formulas.aux": true,
+        "**/c:\\Users\\ASUS\\Downloads\\hoja_formulas.log": true,
+        "**/c:\\Users\\ASUS\\Downloads\\hoja_formulas.gz": true,
+        "**/c:\\Users\\ASUS\\Downloads\\hoja_formulas.out": true,
+        "**/c:\\Users\\ASUS\\Downloads\\Lab3 Calculo Vectorial\\Lab3_Capilaridad_Formal.aux": true,
+        "**/c:\\Users\\ASUS\\Downloads\\Lab3 Calculo Vectorial\\Lab3_Capilaridad_Formal.log": true,
+        "**/c:\\Users\\ASUS\\Downloads\\Lab3 Calculo Vectorial\\Lab3_Capilaridad_Formal.gz": true,
+        "**/c:\\Users\\ASUS\\Downloads\\Lab3 Calculo Vectorial\\Lab3_Capilaridad_Formal.out": true
+    }
+}
