@@ -22,6 +22,7 @@ public class GameWHG {
     private Timer gameLoopTimer;
 
     private int currentLevelIndex = 0;
+    private Modality currentModality = Modality.NORMAL;
 
     public GameWHG() {
         prepareElements();
@@ -36,9 +37,69 @@ public class GameWHG {
 
     private void prepareBoard() {
         levels = new ArrayList<>();
+        levels.add(buildSelectionLevel());
         levels.add(buildLevel1());
         levels.add(buildLevel2());
         currentLevel = levels.get(currentLevelIndex);
+    }
+
+    private boolean isWalkableSelection(int x, int y) {
+        // 1. Damero Central
+        if (x >= 4 && x <= 14 && y >= 4 && y <= 10) return true;
+        // 2. Pasillo Izquierdo (Zona Verde completa)
+        if (x >= 1 && x <= 4 && y >= 7 && y <= 9) return true;
+        // 3. Pasillo Derecho
+        if (x >= 15 && x <= 17 && y >= 7 && y <= 8) return true;
+        // 4. Pestañas de Modalities arriba
+        if (y == 4 && (x == 6 || x == 9 || x == 12)) return true;
+        
+        return false;
+    }
+
+    private Level buildSelectionLevel() {
+        // Personaje Blanco inicializado en la zona verde izquierda
+        Character character = new WhiteCharacter(1.5, 7.125);
+
+        List<Obstacle> obstacles = new ArrayList<>(); 
+        List<Coin> coins = new ArrayList<>(); 
+
+        // Paredes para encerrar completamente al jugador (Mapeado Automático)
+        List<Wall> walls = new ArrayList<>();
+        for (int x = 0; x <= 21; x++) {
+            for (int y = 1; y <= 13; y++) {
+                if (!isWalkableSelection(x, y)) {
+                    walls.add(new Wall(x, y, 1.0, 1.0));
+                }
+            }
+        }
+
+        // Zonas Verdes (Izq: Checkpoint / Der: Goal)
+        List<Checkpoint> checkpoints = new ArrayList<>();
+        checkpoints.add(new Checkpoint(1, 7, 3.0, 2.0)); 
+
+        Goal goal = new Goal(15, 7, 3.0, 2.0); 
+
+        Level selectionLevel = new Level(character, obstacles, coins, walls, checkpoints, goal);
+        selectionLevel.setSelectionLevel(true);
+
+        // Damero Central con colores lila/lavanda de la imagen
+        List<Tile> tiles = new ArrayList<>();
+        for (int x = 4; x <= 14; x++) {
+            for (int y = 5; y <= 10; y++) {
+                String colorHex = ((x + y) % 2 == 0) ? "#b3b1ea" : "#d0cefa";
+                tiles.add(new Tile(x, y, 1.0, 1.0, colorHex));
+            }
+        }
+        selectionLevel.setTiles(tiles);
+
+        // Zonas de modalidad que sobresalen arriba
+        List<ModalityZone> modalityZones = new ArrayList<>();
+        modalityZones.add(new ModalityZone(6.0, 4.0, 1.0, 1.0, Modality.NORMAL));
+        modalityZones.add(new ModalityZone(9.0, 4.0, 1.0, 1.0, Modality.PVP));
+        modalityZones.add(new ModalityZone(12.0, 4.0, 1.0, 1.0, Modality.PVSM));
+        selectionLevel.setModalityZones(modalityZones);
+
+        return selectionLevel;
     }
 
     private Level buildLevel1() {
@@ -176,8 +237,28 @@ public class GameWHG {
 
     public void tick() {
         if (currentLevel != null) {
+            // Si es el nivel de selección, monitoreamos la entrada a ModalityZones
+            if (currentLevel.isSelectionLevel()) {
+                for (ModalityZone zone : currentLevel.getModalityZones()) {
+                    if (CollisionDetector.checkCollision(currentLevel.getCharacter(), zone)) {
+                        this.currentModality = zone.getModality();
+                        System.out.println("Modalidad seleccionada: " + this.currentModality);
+                        // Cargar el primer nivel de juego real (Index 1)
+                        currentLevelIndex = 1;
+                        currentLevel = levels.get(currentLevelIndex);
+                        return;
+                    }
+                }
+            }
+
             currentLevel.tick();
             if (currentLevel.isCompleted()) {
+                if (currentLevel.isSelectionLevel()) {
+                    // Salirse al menú principal y resetear estado
+                    resetGame();
+                    mainWindow.mostrarPanel("MENU");
+                    return;
+                }
                 currentLevelIndex++;
                 if (currentLevelIndex < levels.size()) {
                     currentLevel = levels.get(currentLevelIndex);

@@ -19,6 +19,10 @@ public class Level {
     private List<Tile> tiles;
     
     private boolean completed;
+    
+    // Soporte para Nivel de Selección de Modalidad
+    private List<ModalityZone> modalityZones = new java.util.ArrayList<>();
+    private boolean isSelectionLevel = false;
 
     public Level(Character character, List<Obstacle> obstacles, List<Coin> coins, 
                  List<Wall> walls, List<Checkpoint> checkpoints, Goal goal) {
@@ -148,4 +152,20 @@ public class Level {
     public List<Tile> getTiles() { return tiles; }
     public void setTiles(List<Tile> tiles) { this.tiles = tiles; }
     public boolean isCompleted() { return completed; }
+
+    public List<ModalityZone> getModalityZones() {
+        return modalityZones;
+    }
+
+    public void setModalityZones(List<ModalityZone> modalityZones) {
+        this.modalityZones = modalityZones;
+    }
+
+    public boolean isSelectionLevel() {
+        return isSelectionLevel;
+    }
+
+    public void setSelectionLevel(boolean selectionLevel) {
+        isSelectionLevel = selectionLevel;
+    }
 }
