@@ -117,16 +117,11 @@ public class PanelJuego extends JPanel {
 
     private void cargarBackground() {
         try {
-            backgroundImage = ImageIO.read(new File("src/resources/images/fondo_vacios.png"));
+            backgroundImage = ImageIO.read(new File("src/resources/images/fondo_limbo.png"));
         } catch (IOException e) {
-            System.err.println("Advertencia: No se pudo cargar fondo_vacios.png");
+            System.err.println("Advertencia: No se pudo cargar fondo_limbo.png");
         }
 
-        try {
-            modalityPlayerImage = ImageIO.read(new File("src/resources/images/modalidad_player.png"));
-        } catch (IOException e) {
-            System.err.println("Advertencia: No se pudo cargar modalidad_player.png");
-        }
     }
 
     public void actualizarInterfaz() {
@@ -188,38 +183,43 @@ public class PanelJuego extends JPanel {
         int offsetX = Math.max(20, (vWidth - mapWidth) / 2);
         int offsetY = Math.max(50, (vHeight - mapHeight) / 2);
 
-        // Petición de diseño: Mover una baldosa extra a la derecha en nivel de
-        // selección
-        if (level.isSelectionLevel()) {
-            offsetX += TAMANO_CELDA;
+        java.awt.geom.AffineTransform oldTransform = null;
 
+        // SISTEMA RESPONSIVE TOTAL PARA EL HUB DE SELECCIÓN
+        if (level.isSelectionLevel()) {
+            // BLOQUEO DE PERSPECTIVA ABSOLUTO: Escalar el contexto para que la cuadrícula
+            // lógica
+            // (48x27) ocupe EXACTAMENTE el 100% de la ventana, alineándose con el fondo
+            // estirado.
+            oldTransform = g2d.getTransform();
+            double scaleX = (double) vWidth / mapWidth;
+            double scaleY = (double) vHeight / mapHeight;
+            g2d.scale(scaleX, scaleY);
+
+            // Al estar escalado a nivel ventana, las coordenadas locales nacen en 0,0
+            offsetX = 0;
+            offsetY = 0;
+        }
+
+        if (level.isSelectionLevel()) {
             // 1. RENDERIZAR TÍTULO GRANDE DE MODALIDAD (HellraiserBloody)
             if (titleFont != null) {
                 g2d.setFont(titleFont.deriveFont(Font.PLAIN, 70f));
                 String title = "SELECCIONA LA MODALIDAD";
                 FontMetrics fm = g2d.getFontMetrics();
                 int titleX = (vWidth - fm.stringWidth(title)) / 2;
-                int titleY = 100;
+                int titleY = 60;
+
+                // Si estamos escalados, el texto debe colocarse en coordenadas lógicas
+                if (level.isSelectionLevel()) {
+                    titleX = (mapWidth - fm.stringWidth(title)) / 2;
+                }
 
                 // Sombras densas para legibilidad
                 g2d.setColor(Color.BLACK);
                 g2d.drawString(title, titleX + 4, titleY + 4);
                 g2d.setColor(new Color(139, 0, 0)); // Rojo sangre oscuro
                 g2d.drawString(title, titleX, titleY);
-
-                // 1.1 Subtítulo Atmosférico (Gris Misterioso)
-                if (modalityDescFont != null) {
-                    g2d.setFont(modalityDescFont.deriveFont(Font.BOLD | Font.ITALIC, 28f));
-                    String sub = "BIENVENIDO A LA SELVA OSCURA";
-                    FontMetrics fmSub = g2d.getFontMetrics();
-                    int subX = (vWidth - fmSub.stringWidth(sub)) / 2;
-                    int subY = titleY + 35; // Justo debajo del título
-
-                    g2d.setColor(Color.BLACK);
-                    g2d.drawString(sub, subX + 2, subY + 2);
-                    g2d.setColor(new Color(170, 170, 170, 220)); // Gris plateado espectral
-                    g2d.drawString(sub, subX, subY);
-                }
             }
 
             // 2. RENDERIZAR TEXTOS SOBRE LOS PORTALES (HelloWinds)
@@ -263,7 +263,7 @@ public class PanelJuego extends JPanel {
                         pColor = new Color(231, 76, 60);
                         break;
                     case PVP:
-                        pColor = new Color(241, 196, 15);
+                        pColor = new Color(46, 204, 113); // Verde Místico Esmeralda
                         break;
                     case PVSM:
                         pColor = new Color(52, 152, 219);
@@ -271,18 +271,20 @@ public class PanelJuego extends JPanel {
                     default:
                         pColor = Color.WHITE;
                 }
-                // Tasa de spawn reducida (30% de los frames) para dar más misterio y menos
-                // saturación
-                if (random.nextDouble() < 0.3) {
+                // ALTA INTENSIDAD: Spawn aumentado al 80% para efecto mágico rebosante y
+                // llamativo
+                if (random.nextDouble() < 0.8) {
                     double pX = offsetX + (mz.getPositionX() * TAMANO_CELDA)
                             + random.nextDouble() * (mz.getWidth() * TAMANO_CELDA);
                     double pY = offsetY + (mz.getPositionY() * TAMANO_CELDA)
                             + random.nextDouble() * (mz.getHeight() * TAMANO_CELDA);
-                    double vX = (random.nextDouble() - 0.5) * 0.3; // Deriva lateral casi imperceptible
-                    double vY = -(random.nextDouble() * 0.5 + 0.3); // Ascenso súper lento
-                    // Mayor tiempo de vida (50-90 frames) para que recorran distancia a velocidad
-                    // lenta
-                    selectionParticles.add(new VisualParticle(pX, pY, vX, vY, 50 + random.nextInt(40), pColor));
+
+                    // Movimiento más caótico, enérgico y con dispersión lateral (vX)
+                    double vX = (random.nextDouble() - 0.5) * 1.2;
+                    double vY = -(random.nextDouble() * 1.2 + 0.5); // Ascenso significativamente más veloz
+
+                    // Vida útil expandida para crear ráfagas densas de energía
+                    selectionParticles.add(new VisualParticle(pX, pY, vX, vY, 60 + random.nextInt(60), pColor));
                 }
             }
 
@@ -339,7 +341,8 @@ public class PanelJuego extends JPanel {
         }
 
         // 1.1 Modality Zones (Invisibles en render, solo lógica de colisión)
-        // NO DIBUJAR NADA PARA NIVEL DE SELECCIÓN
+        // 1.1 Modality Zones (Invisibles en render en el Hub de Selección, visibles en
+        // niveles estándar)
         if (!level.isSelectionLevel()) {
             for (ModalityZone mz : level.getModalityZones()) {
                 switch (mz.getModality()) {
@@ -347,7 +350,7 @@ public class PanelJuego extends JPanel {
                         g2d.setColor(new Color(231, 76, 60));
                         break;
                     case PVP:
-                        g2d.setColor(new Color(241, 196, 15));
+                        g2d.setColor(new Color(46, 204, 113)); // Verde Místico Esmeralda
                         break;
                     case PVSM:
                         g2d.setColor(new Color(52, 152, 219));
@@ -454,47 +457,54 @@ public class PanelJuego extends JPanel {
             g2d.setColor(Color.BLACK);
             g2d.drawRect(px, py, pw, ph);
 
-            // Activar antialiasing para garantizar geometría fluida y centrado sub-pixel perfecto
+            // Activar antialiasing para garantizar geometría fluida y centrado sub-pixel
+            // perfecto
             Object antialiasHint = g2d.getRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING);
             g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
 
             // --- DETALLE COSMÉTICO: ROSTRO ASUSTADO ---
-            int eyeSize = (int)(pw * 0.28); 
-            int eyeY = py + (int)(ph * 0.22); 
-            
+            int eyeSize = (int) (pw * 0.28);
+            int eyeY = py + (int) (ph * 0.22);
+
             // Ojo Izquierdo (Blanco + Borde)
             g2d.setColor(Color.WHITE);
-            int eyeLeftX = px + (int)(pw * 0.15);
+            int eyeLeftX = px + (int) (pw * 0.15);
             g2d.fillOval(eyeLeftX, eyeY, eyeSize, eyeSize);
             g2d.setColor(Color.BLACK);
             g2d.drawOval(eyeLeftX, eyeY, eyeSize, eyeSize);
-            
+
             // Ojo Derecho (Blanco + Borde)
             g2d.setColor(Color.WHITE);
-            int eyeRightX = px + pw - (int)(pw * 0.15) - eyeSize;
+            int eyeRightX = px + pw - (int) (pw * 0.15) - eyeSize;
             g2d.fillOval(eyeRightX, eyeY, eyeSize, eyeSize);
             g2d.setColor(Color.BLACK);
             g2d.drawOval(eyeRightX, eyeY, eyeSize, eyeSize);
-            
+
             // Pupilas (ESTRICTAMENTE CENTRADAS MATEMÁTICAMENTE)
-            int pupilSize = Math.max(2, (int)Math.round(eyeSize / 3.0));
-            int pOffset = (int)Math.round((eyeSize - pupilSize) / 2.0);
+            int pupilSize = Math.max(2, (int) Math.round(eyeSize / 3.0));
+            int pOffset = (int) Math.round((eyeSize - pupilSize) / 2.0);
             g2d.fillOval(eyeLeftX + pOffset, eyeY + pOffset, pupilSize, pupilSize);
             g2d.fillOval(eyeRightX + pOffset, eyeY + pOffset, pupilSize, pupilSize);
-            
+
             // Boca Triste (Curva muy pronunciada y más baja)
             g2d.setColor(Color.BLACK);
             java.awt.Stroke oldStroke = g2d.getStroke();
-            g2d.setStroke(new java.awt.BasicStroke(2.8f)); 
-            int mouthW = (int)(pw * 0.28);
-            int mouthH = (int)(ph * 0.30); 
+            g2d.setStroke(new java.awt.BasicStroke(2.8f));
+            int mouthW = (int) (pw * 0.28);
+            int mouthH = (int) (ph * 0.30);
             int mouthX = px + (pw - mouthW) / 2;
-            int mouthY = eyeY + eyeSize + (int)(ph * 0.15); 
-            g2d.drawArc(mouthX, mouthY, mouthW, mouthH, 0, 180); 
-            
+            int mouthY = eyeY + eyeSize + (int) (ph * 0.15);
+            g2d.drawArc(mouthX, mouthY, mouthW, mouthH, 0, 180);
+
             // Restaurar estados de renderizado
             g2d.setStroke(oldStroke);
-            g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, antialiasHint != null ? antialiasHint : java.awt.RenderingHints.VALUE_ANTIALIAS_DEFAULT);
+            g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                    antialiasHint != null ? antialiasHint : java.awt.RenderingHints.VALUE_ANTIALIAS_DEFAULT);
+        }
+
+        // Restaurar el contexto a su transformación nativa al terminar el frame
+        if (oldTransform != null) {
+            g2d.setTransform(oldTransform);
         }
     }
 
@@ -544,12 +554,14 @@ public class PanelJuego extends JPanel {
         int size;
 
         public VisualParticle(double x, double y, double vx, double vy, int maxLife, Color color) {
-            this.x = x; this.y = y;
-            this.vx = vx; this.vy = vy;
+            this.x = x;
+            this.y = y;
+            this.vx = vx;
+            this.vy = vy;
             this.maxLife = maxLife;
             this.life = maxLife;
             this.color = color;
-            this.size = 4 + new java.util.Random().nextInt(4);
+            this.size = 6 + new java.util.Random().nextInt(9); // Partículas un 150% más grandes y radiantes
         }
 
         public boolean update() {

@@ -58,44 +58,83 @@ public class GameWHG {
         }
     }
 
+    private boolean isWalkableSelection(int x, int y) {
+        // 1. Plaza Central Inferior (Con forma trapezoidal para excluir rocas inferiores)
+        if (y >= 18 && y <= 26) {
+            // Estrechar la base lateralmente conforme bajamos en perspectiva Y
+            int leftBound = 12 + (y - 18) / 2;
+            int rightBound = 35 - (y - 18) / 2;
+            
+            // Recorte manual extremo para el cúmulo de rocas abajo a la derecha
+            if (y >= 23 && x >= 30) return false; 
+
+            if (x >= leftBound && x <= rightBound) return true;
+        }
+
+        // 2. Camino y Escaleras hacia el Portal RED (Restricción a banda diagonal 45°)
+        if (y >= 12 && y <= 19 && x >= 6 && x <= 16) {
+            int diff = y - x;
+            // Esto recorta perfectamente los dos triángulos rojos que marcaste (abajo y arriba de la escalera)
+            if (diff >= 3 && diff <= 7) return true;
+        }
+        // Plataforma final del portal Rojo - DESPEJADA para libre tránsito (Círculo rojo solicitado)
+        if (y >= 6 && y <= 12 && x >= 2 && x <= 8) return true;
+
+        // 3. Camino y Escaleras hacia el Portal GREEN (Centro) - EXPANDIDO A LA DERECHA (Zona roja solicitada)
+        if (y >= 9 && y <= 18 && x >= 19 && x <= 23) return true;
+        // Plataforma final del portal Verde
+        if (y >= 3 && y <= 9 && x >= 19 && x <= 23) return true;
+
+        // 4. Camino y Escaleras hacia el Portal BLUE (Restricción a banda diagonal inversa)
+        if (y >= 12 && y <= 19 && x >= 31 && x <= 41) {
+            int sum = x + y;
+            // Recorta las rocas derechas. Relajado a >=47 para habilitar el triángulo superior izquierdo del escalón.
+            if (sum >= 47 && sum <= 54) return true;
+        }
+        // Plataforma final del portal Azul - DESPEJADA COMPLETA para el jugador (Círculo rojo solicitado)
+        if (y >= 6 && y <= 12 && x >= 39 && x <= 46) return true;
+
+        return false;
+    }
+
     private Level buildSelectionLevel() {
-        // Personaje Blanco inicializado en el centro de la tierra del mapa
-        Character character = new WhiteCharacter(11.0, 7.0);
+        // Spawn del personaje en el centro de la plaza inferior (Plano 48x27)
+        Character character = new WhiteCharacter(24.0, 22.0);
 
         List<Obstacle> obstacles = new ArrayList<>();
         List<Coin> coins = new ArrayList<>();
-        List<Wall> walls = new ArrayList<>(); // No hay paredes visibles, el tablero restringe.
         List<Checkpoint> checkpoints = new ArrayList<>();
         Goal goal = null;
 
-        // 1. Configurar el contenedor espacial Tablero
-        Tablero tablero = new Tablero(22, 14, character, obstacles, coins, walls, checkpoints, goal);
+        // Paredes invisibles que delimitan las escaleras y plataformas del fondo
+        List<Wall> walls = new ArrayList<>();
+        for (int x = 0; x < 48; x++) {
+            for (int y = 0; y < 27; y++) {
+                if (!isWalkableSelection(x, y)) {
+                    walls.add(new Wall(x, y, 1.0, 1.0));
+                }
+            }
+        }
 
-        // 2. Restringir el movimiento matemáticamente a los bordes de la tierra de la
-        // imagen (Clamp)
-        // Los valores se definieron tras analizar la perspectiva visual de
-        // 'fondo_vacios.png'
-        // Límites desplazados 5px (-0.125u) hacia la izquierda
-        tablero.setClampingBounds(-1, 18.875, 1.8, 15.295);
+        // 1. Configurar el contenedor espacial Tablero con dimensiones 16:9 nativas
+        Tablero tablero = new Tablero(48, 27, character, obstacles, coins, walls, checkpoints, goal);
 
         Level selectionLevel = new Level(tablero);
         selectionLevel.setSelectionLevel(true);
 
-        // 3. Crear e inyectar las 3 zonas invisibles coincidiendo con los portales
+        // 2. Crear e inyectar las 3 zonas de detección centradas en los portales visuales
+        // AJUSTADO: Posiciones y tamaños expandidos para cubrir todo el arco de energía.
         List<ModalityZone> modalityZones = new ArrayList<>();
 
-        // Rojo (Portal Arriba-Izquierda) - Movido 10px Izq, 5px Arriba (-0.25u /
-        // -0.125u)
-        modalityZones.add(new ModalityZone(3.36, 4.705, 1.2, 1.2, Modality.PLAYER));
-
-        // Amarillo (Portal Arriba-Derecha) - Movido 5px Arriba adicionales (-0.125u)
-        modalityZones.add(new ModalityZone(14.85, 4.58, 1.2, 1.2, Modality.PVP));
-
-        // Azul (Portal Abajo-Centro) - Movido 5px Derecha (+0.125u)
-        modalityZones.add(new ModalityZone(9.48, 11.9, 1.2, 1.2, Modality.PVSM));
+        // Portal Rojo (Izquierda): Expandido verticalmente para tragar todo el arco (como marcaste en Morado)
+        modalityZones.add(new ModalityZone(3.5, 5.0, 3.5, 7.0, Modality.PLAYER));
+        // Portal Verde (Centro superior): Crecido para llegar hasta la base de piedra
+        modalityZones.add(new ModalityZone(19.0, 3.5, 4.0, 6.5, Modality.PVP));
+        // Portal Azul (Derecha): Crecido hacia abajo para tocar el piso de la plataforma
+        modalityZones.add(new ModalityZone(42.5, 5.0, 3.5, 7.0, Modality.PVSM));
 
         selectionLevel.setModalityZones(modalityZones);
-        selectionLevel.setTiles(new ArrayList<>()); // Sin cuadrícula visual clásica
+        selectionLevel.setTiles(new ArrayList<>());
 
         return selectionLevel;
     }

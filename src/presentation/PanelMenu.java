@@ -3,11 +3,13 @@ package presentation;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.AffineTransform;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -45,6 +47,16 @@ public class PanelMenu extends JPanel {
     private int transitionDuration;
 
     // Contenedor de botones
+    private List<JButton> menuButtons = new ArrayList<>();
+
+    // Sistema dinámico de partículas de sangre (Modo Macabro)
+    private List<BloodParticle> bloodParticles = new ArrayList<>();
+    private List<BloodParticle> stagingBloodParticles = new ArrayList<>(); // Buffer para prevenir
+                                                                           // ConcurrentModification
+
+    // Sistema de brillo arcoiris (Modo Normal)
+    private List<RainbowParticle> rainbowParticles = new ArrayList<>();
+    private List<RainbowParticle> stagingRainbowParticles = new ArrayList<>();
 
     public PanelMenu(VentanaPrincipal ventana) {
         this.ventana = ventana;
@@ -67,7 +79,7 @@ public class PanelMenu extends JPanel {
         try {
             File fontFile = new File("src/resources/fonts/HellraiserBloody.ttf");
             Font baseFont = Font.createFont(Font.TRUETYPE_FONT, fontFile);
-            
+
             // Unificar la tipografía HellraiserBloody globalmente para ambos estados
             normalFont = baseFont.deriveFont(60f);
             macabreFont = baseFont.deriveFont(60f);
@@ -78,41 +90,38 @@ public class PanelMenu extends JPanel {
         }
 
         // 2. Configurar Layout
-        setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.weightx = 1.0;
-        gbc.weighty = 1.0;
-        gbc.anchor = GridBagConstraints.SOUTH;
-        gbc.insets = new Insets(0, 0, 40, 0);
+        // 2. Configurar Layout Absoluto para Posicionamiento Preciso sobre Ponies
+        setLayout(null);
 
-        // Panel contenedor para los botones
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(2, 2, 50, 15));
-        buttonPanel.setOpaque(false);
+        // 3. Instanciar botones con nuevos identificadores del arte conceptual
+        JButton btnJugar = crearBoton("JUGAR");
+        JButton btnCargar = crearBoton("CARGAR");
+        JButton btnOpciones = crearBoton("OPCIONES");
+        JButton btnSalir = crearBoton("SALIR");
 
-        // 3. Instanciar botones dinámicos
-        // 3. Instanciar Botones Infernales (Arquitectura Ghost Button)
-        BotonInfernal btnNuevaPartida = new BotonInfernal("NUEVA PARTIDA", normalFont, Color.RED);
-        BotonInfernal btnCargar = new BotonInfernal("CARGAR PARTIDA", normalFont, Color.ORANGE);
-        BotonInfernal btnOpciones = new BotonInfernal("OPCIONES", normalFont, Color.LIGHT_GRAY);
-        BotonInfernal btnSalir = new BotonInfernal("ABANDONAR ESPERANZA", normalFont, new Color(139, 0, 0));
-
-        // Configurar acciones de dominio
-        btnNuevaPartida.addActionListener(e -> {
+        // Configurar acciones directas (Transición inmediata a la carga de nivel)
+        btnJugar.addActionListener(e -> {
+            // Preparar el motor del juego en segundo plano
             ventana.getGameOrchestrator().resetGame();
-            ventana.mostrarPanel("JUEGO");
+            // Lanzar cinemática de precarga del Nivel
+            ventana.getPanelSplashLimbo().startSequence();
+            ventana.mostrarPanel("SPLASH_LIMBO");
         });
+
         btnSalir.addActionListener(e -> System.exit(0));
 
-        // Registrar orquestación visual global en Grid 2x2
-        registrarBotonInfernal(btnNuevaPartida, buttonPanel);
-        registrarBotonInfernal(btnOpciones, buttonPanel);
-        registrarBotonInfernal(btnCargar, buttonPanel);
-        registrarBotonInfernal(btnSalir, buttonPanel);
+        // Registrar botones para actualización cíclica
+        menuButtons.add(btnJugar);
+        menuButtons.add(btnOpciones);
+        menuButtons.add(btnCargar);
+        menuButtons.add(btnSalir);
 
-        add(buttonPanel, gbc);
+        // Añadir directamente al panel principal para que doLayout gestione sus
+        // coordenadas
+        add(btnJugar);
+        add(btnOpciones);
+        add(btnCargar);
+        add(btnSalir);
 
         // 4. Ciclo automático desactivado - Controlado ahora por Mouse Hover
 
@@ -121,7 +130,6 @@ public class PanelMenu extends JPanel {
         animationTimer = new Timer(16, e -> repaint());
         animationTimer.start();
     }
-
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -173,8 +181,34 @@ public class PanelMenu extends JPanel {
             g2d.drawImage(normalImage, x, y, drawWidth, drawHeight, this);
         }
 
-        // Título Multilínea con Distribución Cinematográfica
-        drawMultiLineTitle(g2d, Color.WHITE, Color.BLACK, 0, 0, 290);
+        // 1. Título Multilínea con Distribución Cinematográfica (Dispara spawn de
+        // brillo si useRainbow=true)
+        drawMultiLineTitle(g2d, Color.WHITE, Color.BLACK, 0, 0, 290, true, false);
+
+        // 2. Render y Actualización de Brillos Mágicos de Arcoiris
+        Composite oldComp = g2d.getComposite();
+        Iterator<RainbowParticle> it = rainbowParticles.iterator();
+        while (it.hasNext()) {
+            RainbowParticle p = it.next();
+            p.update();
+            if (p.alpha <= 0 && !p.fadingIn) {
+                it.remove();
+            } else {
+                // Calcular opacidad segura
+                float normAlpha = Math.max(0f, Math.min(255f, p.alpha)) / 255f;
+                g2d.setColor(Color.getHSBColor(p.hue, 0.6f, 1.0f)); // Brillo neón pastel
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, normAlpha));
+                // Dibujar punto de luz
+                g2d.fillOval((int) p.x, (int) p.y, (int) p.size, (int) p.size);
+            }
+        }
+        g2d.setComposite(oldComp);
+
+        // 3. Flush de la cola de staging
+        if (!stagingRainbowParticles.isEmpty()) {
+            rainbowParticles.addAll(stagingRainbowParticles);
+            stagingRainbowParticles.clear();
+        }
     }
 
     private void renderGlitch(Graphics2D g2d, String title) {
@@ -183,7 +217,8 @@ public class PanelMenu extends JPanel {
         double intensity = progress; // De 0.0 a 1.0
 
         // 1. Dibujar fondo base (suavizado entre Normal y Macabre hasta el final)
-        float alphaMacabre = (float) Math.max(0, Math.min(1.0, (progress - 0.3) / 0.7)); // Empieza a los 30% y termina al 100%
+        float alphaMacabre = (float) Math.max(0, Math.min(1.0, (progress - 0.3) / 0.7)); // Empieza a los 30% y termina
+                                                                                         // al 100%
         g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
         if (alphaMacabre > 0) {
             g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphaMacabre));
@@ -201,22 +236,25 @@ public class PanelMenu extends JPanel {
             // Interpolación de valores
             int currentHeight = (int) (220 + (300 - 220) * progress);
             int currentY = (int) (40 + (20 - 40) * progress) + yOffset;
-            
+
             // 1. Dibujar Estrella Normal Fragmentándose
             if (progress < 0.9) {
-                float fragAlpha = (progress > 0.6) ? (float)(1.0 - (progress - 0.6)/0.3) : 1.0f;
+                float fragAlpha = (progress > 0.6) ? (float) (1.0 - (progress - 0.6) / 0.3) : 1.0f;
                 g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0, fragAlpha)));
-                
-                int drawWidthN = (normalImage.getWidth(null) * currentHeight) / Math.max(1, normalImage.getHeight(null));
+
+                int drawWidthN = (normalImage.getWidth(null) * currentHeight)
+                        / Math.max(1, normalImage.getHeight(null));
                 int slices = 10;
                 int sliceH = currentHeight / slices;
                 for (int i = 0; i < slices; i++) {
                     // Desplazamiento explosivo hacia afuera
                     int fragOffset = (int) (Math.random() * 50 * progress);
                     int xFrag = (getWidth() - drawWidthN) / 2 + (Math.random() > 0.5 ? fragOffset : -fragOffset);
-                    
-                    g2d.drawImage(normalImage, xFrag, currentY + i * sliceH, xFrag + drawWidthN, currentY + (i + 1) * sliceH,
-                            0, i * (normalImage.getHeight(null)/slices), normalImage.getWidth(null), (i + 1) * (normalImage.getHeight(null)/slices), this);
+
+                    g2d.drawImage(normalImage, xFrag, currentY + i * sliceH, xFrag + drawWidthN,
+                            currentY + (i + 1) * sliceH,
+                            0, i * (normalImage.getHeight(null) / slices), normalImage.getWidth(null),
+                            (i + 1) * (normalImage.getHeight(null) / slices), this);
                 }
                 g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
             }
@@ -224,7 +262,8 @@ public class PanelMenu extends JPanel {
             // 2. Estrella Macabra (Ensamblándose / Cross-fade)
             if (alphaMacabre > 0) {
                 g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphaMacabre));
-                int drawWidthM = (macabreImage.getWidth(null) * currentHeight) / Math.max(1, macabreImage.getHeight(null));
+                int drawWidthM = (macabreImage.getWidth(null) * currentHeight)
+                        / Math.max(1, macabreImage.getHeight(null));
                 int xM = (getWidth() - drawWidthM) / 2;
                 // Pequeña vibración mientras se estabiliza
                 int shakeM = (int) (Math.random() * 5 * (1.0 - progress));
@@ -234,14 +273,14 @@ public class PanelMenu extends JPanel {
         }
 
         // 3. Glitch Cromático y Vibración (Se apaga suavemente al final)
-        int shake = (int) (Math.random() * 10 * (1.0 - progress)); 
+        int shake = (int) (Math.random() * 10 * (1.0 - progress));
         if (progress < 0.98) {
-            float glitchAlpha = (progress > 0.7) ? (float)(1.0 - (progress - 0.7)/0.3) : 1.0f;
-            renderRGBSplit(g2d, title, (int)(15 * (1.0 - progress)), Math.max(0, glitchAlpha));
+            float glitchAlpha = (progress > 0.7) ? (float) (1.0 - (progress - 0.7) / 0.3) : 1.0f;
+            renderRGBSplit(g2d, title, (int) (15 * (1.0 - progress)), Math.max(0, glitchAlpha));
         }
 
         // 4. Distorsión por Bloques / "Melting" (Se desvanece al final)
-        float distortionAlpha = (progress > 0.75) ? (float)(1.0 - (progress - 0.75)/0.25) : 1.0f;
+        float distortionAlpha = (progress > 0.75) ? (float) (1.0 - (progress - 0.75) / 0.25) : 1.0f;
         if (progress > 0.4 && distortionAlpha > 0) {
             int blockCount = (int) (100 * (1.0 - progress) * distortionAlpha);
             for (int i = 0; i < blockCount; i++) {
@@ -249,37 +288,38 @@ public class PanelMenu extends JPanel {
                 int bh = (int) (Math.random() * 40 * (1.0 - progress));
                 int bx = (int) (Math.random() * getWidth());
                 int by = (int) (Math.random() * getHeight());
-                
+
                 // Bloques con transparencia progresiva
-                g2d.setColor(Math.random() > 0.3 ? new Color(0, 0, 0, (int)(255 * distortionAlpha)) 
-                                                 : new Color(150, 0, 0, (int)(180 * distortionAlpha)));
+                g2d.setColor(Math.random() > 0.3 ? new Color(0, 0, 0, (int) (255 * distortionAlpha))
+                        : new Color(150, 0, 0, (int) (180 * distortionAlpha)));
                 g2d.fillRect(bx, by, bw, bh);
             }
         }
 
         // Ruido estático fino (se apaga gradualmente)
         if (progress < 0.98) {
-            g2d.setColor(new Color(255, 255, 255, (int)(30 * (1.0 - progress) * distortionAlpha)));
+            g2d.setColor(new Color(255, 255, 255, (int) (30 * (1.0 - progress) * distortionAlpha)));
             for (int i = 0; i < 30; i++) {
-                g2d.drawLine(0, (int)(Math.random()*getHeight()), getWidth(), (int)(Math.random()*getHeight()));
+                g2d.drawLine(0, (int) (Math.random() * getHeight()), getWidth(), (int) (Math.random() * getHeight()));
             }
         }
     }
 
     private void renderRGBSplit(Graphics2D g2d, String title, int offset, float alpha) {
         Composite oldComp = g2d.getComposite();
-        if (alpha < 1.0f) g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+        if (alpha < 1.0f)
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
 
-        int randY = (int)(Math.random() * 4);
+        int randY = (int) (Math.random() * 4);
 
         // Canal Rojo Split Multilínea
-        drawMultiLineTitle(g2d, new Color(255, 0, 0, 120), null, -offset, randY, 290);
-        
+        drawMultiLineTitle(g2d, new Color(255, 0, 0, 120), null, -offset, randY, 290, false, false);
+
         // Canal Azul Split Multilínea
-        drawMultiLineTitle(g2d, new Color(0, 0, 255, 120), null, offset, -randY, 290);
+        drawMultiLineTitle(g2d, new Color(0, 0, 255, 120), null, offset, -randY, 290, false, false);
 
         // Centro Blanco principal Multilínea
-        drawMultiLineTitle(g2d, Color.WHITE, null, 0, 0, 290);
+        drawMultiLineTitle(g2d, Color.WHITE, null, 0, 0, 290, false, false);
 
         g2d.setComposite(oldComp);
     }
@@ -287,7 +327,7 @@ public class PanelMenu extends JPanel {
     private void renderNormalization(Graphics2D g2d, String title) {
         long currentTime = System.currentTimeMillis();
         double progress = Math.max(0.0, Math.min(1.0, (double) (currentTime - glitchStartTime) / transitionDuration));
-        
+
         // Fondo: Cross-fade inverso (Macabre -> Normal)
         float alphaNormal = (float) progress;
         g2d.drawImage(macabreBackgroundImage, 0, 0, getWidth(), getHeight(), this);
@@ -304,7 +344,7 @@ public class PanelMenu extends JPanel {
 
             int currentHeight = (int) (300 + (220 - 300) * progress);
             int currentY = (int) (20 + (40 - 20) * progress) + yOffset;
-            
+
             // Estrella Macabra
             int drawWidthM = (macabreImage.getWidth(null) * currentHeight) / Math.max(1, macabreImage.getHeight(null));
             int xM = (getWidth() - drawWidthM) / 2;
@@ -320,10 +360,10 @@ public class PanelMenu extends JPanel {
 
         // Título: Recuperación de brillo
         // Título Recuperado Multilínea
-        drawMultiLineTitle(g2d, Color.WHITE, Color.BLACK, 0, 0, 290);
+        drawMultiLineTitle(g2d, Color.WHITE, Color.BLACK, 0, 0, 290, false, false);
 
         // Barrido de Luz Purificador (Efecto de escaneo blanco)
-        g2d.setColor(new Color(255, 255, 255, (int)(100 * (1.0 - progress))));
+        g2d.setColor(new Color(255, 255, 255, (int) (100 * (1.0 - progress))));
         int sweepY = (int) (progress * getHeight());
         g2d.fillRect(0, sweepY, getWidth(), 20);
     }
@@ -358,60 +398,305 @@ public class PanelMenu extends JPanel {
             g2d.drawImage(macabreImage, x, y, drawWidth, drawHeight, this);
         }
 
-        // Título Macabro Multilínea alineado
-        drawMultiLineTitle(g2d, Color.WHITE, Color.BLACK, 0, 0, 290);
+        // 1. Título Macabro en ROJO SANGRE (Activa el disparador de partículas)
+        drawMultiLineTitle(g2d, new Color(180, 0, 0), Color.BLACK, 0, 0, 290, false, true);
+
+        // 2. Render y Actualización de Gotas de Sangre Chorreando
+        Iterator<BloodParticle> it = bloodParticles.iterator();
+        while (it.hasNext()) {
+            BloodParticle p = it.next();
+            p.update();
+            if (p.y > getHeight() || p.alpha <= 0) {
+                it.remove(); // Garbage collect visual
+            } else {
+                // Dibujar contorno oscuro de la gota
+                g2d.setColor(new Color(100, 0, 0, p.alpha));
+                g2d.fillOval((int) p.x - 1, (int) p.y - 1, (int) p.size + 2, (int) (p.size * p.stretchY) + 2);
+                // Dibujar núcleo carmesí brillante
+                g2d.setColor(new Color(180, 0, 0, p.alpha));
+                g2d.fillOval((int) p.x, (int) p.y, (int) p.size, (int) (p.size * p.stretchY));
+            }
+        }
+
+        // 3. Integración Segura de nuevas partículas generadas este frame
+        if (!stagingBloodParticles.isEmpty()) {
+            bloodParticles.addAll(stagingBloodParticles);
+            stagingBloodParticles.clear();
+        }
 
         g2d.setComposite(oldComp);
+    }
+
+    @Override
+    public void doLayout() {
+        // Forzar redimensionamiento manual relativo al tamaño del lienzo
+        super.doLayout();
+
+        int w = getWidth();
+        int h = getHeight();
+
+        // Garantizar que los botones están creados y mapeados
+        if (menuButtons != null && menuButtons.size() >= 4) {
+            JButton btnJugar = menuButtons.get(0);
+            JButton btnOpciones = menuButtons.get(1);
+            JButton btnCargar = menuButtons.get(2);
+            JButton btnSalir = menuButtons.get(3);
+
+            // Definir áreas de toque confortables sobre los ponies
+            int ponyW = 135;
+            int ponyH = 55;
+
+            // Mapeo Porcentual Preciso basado en la distribución artística
+            // Pony Blanco (JUGAR) -> ~16% Horizontal, ~76% Vertical
+            btnJugar.setBounds((int) (w * 0.147) - ponyW / 2, (int) (h * 0.790) - ponyH / 2, ponyW, ponyH);
+
+            // Pony Azul (CARGAR) -> ~42% Horizontal, ~76% Vertical
+            btnCargar.setBounds((int) (w * 0.438) - ponyW / 2, (int) (h * 0.79) - ponyH / 2, ponyW, ponyH);
+
+            // Pony Violeta (OPCIONES) -> ~64% Horizontal, ~76% Vertical
+            btnOpciones.setBounds((int) (w * 0.653) - ponyW / 2, (int) (h * 0.79) - ponyH / 2, ponyW, ponyH);
+
+            // El Sol (SALIR) -> ~92% Horizontal, ~16% Vertical
+            int sunDiameter = 130;
+            btnSalir.setBounds((int) (w * 0.931) - sunDiameter / 2, (int) (h * 0.17) - sunDiameter / 2, sunDiameter,
+                    sunDiameter);
+        }
     }
 
     /**
      * Crea un botón que adapta su visualización al estado actual del menú.
      */
-    /**
-     * Centraliza la inyección de comportamiento global del menú que reacciona
-     * simultáneamente al estado interno de proximidad de cada BotonInfernal.
-     */
-    private void registrarBotonInfernal(BotonInfernal boton, JPanel contenedor) {
+    private JButton crearBoton(String texto) {
+        JButton boton = new JButton(texto) {
+            @Override
+            public Dimension getPreferredSize() {
+                // Usar siempre la fuente Normal para mantener el tamaño constante
+                Font f = (normalFont != null) ? normalFont.deriveFont(Font.BOLD, 36f)
+                        : new Font(Font.SANS_SERIF, Font.BOLD, 36);
+                FontMetrics fm = getFontMetrics(f);
+                int w = fm.stringWidth(getText()) + 40;
+                int h = fm.getHeight() + 20;
+                return new Dimension(w, h);
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                // El delineado de depuración ha sido retirado tras calibración exitosa.
+                // Los botones operan en modo de transparencia pura absoluta.
+            }
+        };
+
+        boton.setContentAreaFilled(false);
+        boton.setFocusPainted(false);
+        boton.setOpaque(false);
+        boton.setBorderPainted(false);
+        boton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
         boton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                // Gatillo para la metamorfosis del fondo y atmósfera global
+                // Cambio INMEDIATO a estado Macabro al poner el mouse sobre cualquier botón
                 currentState = MenuAnimationState.MACABRE;
                 macabreStartTime = System.currentTimeMillis();
-                PanelMenu.this.repaint(); 
+                rainbowParticles.clear(); // Eliminar rastros de fantasía
+                PanelMenu.this.repaint();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                // Retorno atmosférico a estado Normal
+                // Retorno instantáneo al estado Normal al salir
                 currentState = MenuAnimationState.NORMAL;
+                bloodParticles.clear(); // Eliminar rastros macabros
                 PanelMenu.this.repaint();
             }
         });
-        contenedor.add(boton);
+
+        return boton;
     }
 
-    private void drawMultiLineTitle(Graphics2D g2d, Color fill, Color stroke, int xOff, int yOff, int yBase) {
-        String[] lines = {"THE", "DOPO", "HARDEST GAME"};
-        float[] sizes = {40f, 150f, 45f};
-        int[] yDiffs = {0, 125, 185}; // Aumentado el espaciado vertical
-        
+    private void drawMultiLineTitle(Graphics2D g2d, Color fill, Color stroke, int xOff, int yOff, int yBase,
+            boolean useRainbow, boolean allowBloodSpawn) {
+        String[] lines = { "THE", "DOPO", "HARDEST GAME" };
+        float[] sizes = { 55f, 195f, 60f }; // Escalado masivo solicitado ("maaas grande")
+
+        // Centrado visual geométrico compartido para el arco (Concéntrico)
+        double centerX = getWidth() / 2.0 + xOff;
+        double centerY = yBase + 950; // Ajustar radio de giro a la nueva escala mayor
+
+        // Bajar alturas y recalcular brechas para fuentes más grandes
+        int[] yTargets = { yBase + 10, yBase + 160, yBase + 235 };
+
         for (int i = 0; i < 3; i++) {
             g2d.setFont(normalFont.deriveFont(sizes[i]));
             FontMetrics fm = g2d.getFontMetrics();
-            int x = (getWidth() - fm.stringWidth(lines[i])) / 2 + xOff;
-            int y = (yBase + 30) + yDiffs[i] + yOff; // Desplazar todo el conjunto hacia abajo
-            
-            if (stroke != null) {
-                g2d.setColor(stroke);
-                for (int dx = -2; dx <= 2; dx++) {
-                    for (int dy = -2; dy <= 2; dy++) {
-                        if (dx != 0 || dy != 0) g2d.drawString(lines[i], x + dx, y + dy);
+
+            double linePeakY = yTargets[i] + yOff;
+            double radius = centerY - linePeakY; // Radio concéntrico variable por línea
+
+            char[] chars = lines[i].toCharArray();
+            int totalWidth = fm.stringWidth(lines[i]);
+
+            // Ángulo total que abarca el texto = longitud del arco / radio
+            double totalAngle = totalWidth / radius;
+            double startAngle = -totalAngle / 2.0; // Centrado simétrico
+
+            double currentAccumWidth = 0;
+
+            for (int c = 0; c < chars.length; c++) {
+                String ch = String.valueOf(chars[c]);
+                int cw = fm.stringWidth(ch);
+
+                // Calcular el ángulo exacto del CENTRO de este carácter particular
+                double charCenterInArc = currentAccumWidth + cw / 2.0;
+                double theta = startAngle + (charCenterInArc / radius);
+
+                // Convertir de radianes locales a vector 2D en el círculo
+                double drawAngle = -Math.PI / 2.0 + theta;
+                double px = centerX + Math.cos(drawAngle) * radius;
+                double py = centerY + Math.sin(drawAngle) * radius;
+
+                // Aplicar Matrices de Transformación para Rotación Local del Carácter
+                AffineTransform old = g2d.getTransform();
+                g2d.translate(px, py);
+                g2d.rotate(theta); // Alínea la base de la letra perpendicular al radio (forma el arco perfecto)
+
+                // 1. Determinación final de colores (Capa de Personalización Cromática)
+                Color activeFill = fill;
+                Color activeStroke = stroke;
+
+                if (useRainbow) {
+                    if (i == 0) {
+                        // Regla especial: "THE" invertido en modo normal (Negro con borde Blanco)
+                        activeFill = Color.BLACK;
+                        activeStroke = Color.WHITE;
+                    } else {
+                        // Resto de letras: Gradiente de Arcoiris
+                        float hue = (float) currentAccumWidth / (float) Math.max(1, totalWidth);
+                        activeFill = Color.getHSBColor(hue, 0.85f, 1.0f);
                     }
                 }
+
+                // 2. Dibujar Contorno (Relieve)
+                if (activeStroke != null) {
+                    g2d.setColor(activeStroke);
+                    for (int dx = -2; dx <= 2; dx++) {
+                        for (int dy = -2; dy <= 2; dy++) {
+                            if (dx != 0 || dy != 0)
+                                g2d.drawString(ch, -cw / 2 + dx, dy);
+                        }
+                    }
+                }
+
+                // 3. Dibujar Relleno Principal
+                g2d.setColor(activeFill);
+                g2d.drawString(ch, -cw / 2, 0);
+
+                g2d.setTransform(old); // Limpiar matriz de transformación para el siguiente ciclo
+
+                // Inyectar gota de sangre probabilísticamente solo si está en modo macabro
+                if (allowBloodSpawn && bloodParticles.size() < 250 && Math.random() < 0.018) {
+                    stagingBloodParticles.add(new BloodParticle(px, py));
+                }
+
+                // Inyectar destello de arcoiris si está en modo feliz/normal (Más frecuentes y
+                // densos)
+                if (useRainbow && rainbowParticles.size() < 250 && Math.random() < 0.015) {
+                    stagingRainbowParticles.add(new RainbowParticle(px, py));
+                }
+
+                currentAccumWidth += cw;
             }
-            g2d.setColor(fill);
-            g2d.drawString(lines[i], x, y);
+        }
+    }
+
+    /**
+     * Define una partícula dinámica de sangre con físicas vectoriales duales (goteo vs explosión).
+     */
+    private static class BloodParticle {
+        double x, y, vx, vy;
+        double gravity;
+        double stretchY;
+        float size;
+        int alpha = 255;
+        int decaySpeed;
+
+        // Constructor 1: Modo Goteo Estándar (Desde el título)
+        public BloodParticle(double x, double y) {
+            this.x = x + (Math.random() * 30 - 15);
+            this.y = y + 5;
+            this.vx = 0;
+            this.vy = 0.3 + Math.random() * 0.7;
+            this.size = 3f + (float) (Math.random() * 3.5f);
+            this.gravity = 0.01;
+            this.stretchY = 1.6; // Forma de gota estirada
+            this.decaySpeed = 1;
+        }
+
+        // Constructor 2: Modo Explosión (Desde los ponies)
+        public BloodParticle(double startX, double startY, boolean explosion) {
+            this.x = startX + (Math.random() * 40 - 20);
+            this.y = startY + (Math.random() * 30 - 15);
+            // Calcular vector de velocidad radial
+            double angle = Math.random() * Math.PI * 2;
+            double force = 4.0 + Math.random() * 14.0;
+            this.vx = Math.cos(angle) * force;
+            this.vy = Math.sin(angle) * force - 4.0; // Sesgo inicial hacia arriba para "saltar"
+            this.size = 5f + (float) (Math.random() * 8.0f); // Trozos más grandes
+            this.gravity = 0.4; // Fuerte caída gravitacional
+            this.stretchY = 1.0; // Forma esférica tipo coágulo/salpicadura
+            this.decaySpeed = 4; // Desvanecimiento más rápido por violencia visual
+        }
+
+        public void update() {
+            x += vx;
+            y += vy;
+            vy += gravity;
+            vx *= 0.97; // Fricción del aire lateral
+            
+            // Lógica de degradación orgánica
+            if (Math.random() > 0.4) {
+                alpha -= decaySpeed;
+                if (alpha < 0) alpha = 0;
+            }
+        }
+    }
+
+    /**
+     * Define una mota de luz flotante con fading de entrada/salida y tonalidad
+     * aleatoria.
+     */
+    private static class RainbowParticle {
+        double x, y, vx, vy;
+        float size;
+        int alpha = 0;
+        int maxAlpha;
+        boolean fadingIn = true;
+        float hue;
+
+        public RainbowParticle(double x, double y) {
+            this.x = x + (Math.random() * 30 - 15);
+            this.y = y + (Math.random() * 20 - 10); // Origen disperso cerca de la letra
+            this.vx = (Math.random() - 0.5) * 0.4; // Viento lateral sutil
+            this.vy = -0.15 - Math.random() * 0.3; // Flotan HACIA ARRIBA lentamente
+            this.size = 3.5f + (float) (Math.random() * 4.0f); // Tamaño amplificado para mayor visibilidad
+            this.maxAlpha = 130 + (int) (Math.random() * 125); // Mucho más brillante y luminosa
+            this.hue = (float) Math.random(); // Color propio aleatorio
+        }
+
+        public void update() {
+            x += vx;
+            y += vy;
+            // Efecto de respiración del brillo
+            if (fadingIn) {
+                alpha += 2;
+                if (alpha >= maxAlpha)
+                    fadingIn = false;
+            } else {
+                // Desvanecer sutilmente
+                if (Math.random() > 0.3)
+                    alpha -= 1;
+            }
         }
     }
 }

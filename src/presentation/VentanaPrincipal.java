@@ -14,6 +14,8 @@ public class VentanaPrincipal extends JFrame {
     private CardLayout cardLayout;
     private PanelMenu panelMenu;
     private PanelJuego panelJuego;
+    private PanelSplashScreen panelSplashIntro;
+    private PanelSplashScreen panelSplashLimbo;
     private GameWHG gameOrchestrator;
 
     public VentanaPrincipal(GameWHG gameOrchestrator) {
@@ -26,7 +28,8 @@ public class VentanaPrincipal extends JFrame {
         setSize(screenSize); 
         
         setLocationRelativeTo(null); 
-        setResizable(true);
+        setUndecorated(true); // Elimina bordes y barra de título para Pantalla Completa Real
+        setResizable(false);
         setExtendedState(JFrame.MAXIMIZED_BOTH); 
 
         cardLayout = new CardLayout();
@@ -34,16 +37,23 @@ public class VentanaPrincipal extends JFrame {
 
         panelMenu = new PanelMenu(this);
         panelJuego = new PanelJuego(this, gameOrchestrator);
+        panelSplashIntro = new PanelSplashScreen(this, "pantalla_carga_inicio.png", "MENU");
+        panelSplashLimbo = new PanelSplashScreen(this, "1.Limbro.png", "JUEGO");
 
         // Bloquear las dimensiones preferidas internas al tamaño de la pantalla
         // Esto evita que el Layout Manager "ajuste" el tamaño en el primer frame
         panelMenu.setPreferredSize(screenSize);
         panelJuego.setPreferredSize(screenSize);
+        panelSplashIntro.setPreferredSize(screenSize);
+        panelSplashLimbo.setPreferredSize(screenSize);
 
+        add(panelSplashIntro, "SPLASH_INTRO");
+        add(panelSplashLimbo, "SPLASH_LIMBO");
         add(panelMenu, "MENU");
         add(panelJuego, "JUEGO");
 
-        mostrarPanel("MENU");
+        mostrarPanel("SPLASH_INTRO");
+        panelSplashIntro.startSequence(); // Iniciar animación de arranque
     }
 
     public void mostrarPanel(String nombrePanel) {
@@ -55,6 +65,10 @@ public class VentanaPrincipal extends JFrame {
 
     public PanelJuego getPanelJuego() {
         return panelJuego;
+    }
+
+    public PanelSplashScreen getPanelSplashLimbo() {
+        return panelSplashLimbo;
     }
 
     public GameWHG getGameOrchestrator() {
