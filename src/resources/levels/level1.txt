@@ -1,0 +1,26 @@
+# Nivel 1 - Traducción a Sistema Dinámico
+SIZE 11 11
+
+# Ubicación inicial del personaje
+START 1.125 1.125
+
+# Perímetro de Paredes (Paredes externas)
+WALL 0 0 11 1
+WALL 0 10 11 1
+WALL 0 1 1 9
+WALL 10 1 1 9
+
+# Zonas Seguras
+CHECKPOINT 1 1 1 1
+GOAL 8 8 1 1
+
+# Baldosas de suelo visuales (Rellena de 1,1 a 9,9 el damero)
+TILES 1 1 9 9
+
+# Entidades dinámicas
+COIN 8.25 3.25
+
+# Obstáculos
+OBSTACLE FAST 5.125 5.125 R true
+OBSTACLE BASIC 4.125 3.125 D false
+OBSTACLE PATROL 7.125 7.125 2.0

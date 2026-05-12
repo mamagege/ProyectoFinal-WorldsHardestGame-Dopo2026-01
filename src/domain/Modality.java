@@ -7,7 +7,7 @@ package domain;
  * @version 2026
  */
 public enum Modality {
-    NORMAL,
+    PLAYER,
     PVP,
     PVSM
 }

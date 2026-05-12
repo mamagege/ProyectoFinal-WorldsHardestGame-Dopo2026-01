@@ -20,15 +20,25 @@ public class VentanaPrincipal extends JFrame {
         this.gameOrchestrator = gameOrchestrator;
         setTitle("The DOPO Hardest Game");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(new Dimension(800, 600));
+        
+        // Sincronizar tamaño inicial con la pantalla para eliminar el efecto visual de expansión
+        Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+        setSize(screenSize); 
+        
         setLocationRelativeTo(null); 
-        setResizable(false);
+        setResizable(true);
+        setExtendedState(JFrame.MAXIMIZED_BOTH); 
 
         cardLayout = new CardLayout();
         setLayout(cardLayout);
 
         panelMenu = new PanelMenu(this);
         panelJuego = new PanelJuego(this, gameOrchestrator);
+
+        // Bloquear las dimensiones preferidas internas al tamaño de la pantalla
+        // Esto evita que el Layout Manager "ajuste" el tamaño en el primer frame
+        panelMenu.setPreferredSize(screenSize);
+        panelJuego.setPreferredSize(screenSize);
 
         add(panelMenu, "MENU");
         add(panelJuego, "JUEGO");

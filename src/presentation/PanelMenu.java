@@ -66,19 +66,16 @@ public class PanelMenu extends JPanel {
         }
 
         try {
-            File fontLuvable = new File("src/resources/fonts/Luvable.ttf");
-            normalFont = Font.createFont(Font.TRUETYPE_FONT, fontLuvable).deriveFont(60f);
+            File fontFile = new File("src/resources/fonts/HellraiserBloody.ttf");
+            Font baseFont = Font.createFont(Font.TRUETYPE_FONT, fontFile);
+            
+            // Unificar la tipografía HellraiserBloody globalmente para ambos estados
+            normalFont = baseFont.deriveFont(60f);
+            macabreFont = baseFont.deriveFont(60f);
         } catch (FontFormatException | IOException e) {
-            System.err.println("Advertencia: No se pudo cargar Luvable.ttf");
+            System.err.println("Advertencia: No se pudo cargar HellraiserBloody.ttf");
             normalFont = new Font(Font.SANS_SERIF, Font.BOLD, 60);
-        }
-
-        try {
-            File fontHorror = new File("src/resources/fonts/HorrorCorps.ttf");
-            macabreFont = Font.createFont(Font.TRUETYPE_FONT, fontHorror).deriveFont(60f);
-        } catch (FontFormatException | IOException e) {
-            System.err.println("Advertencia: No se pudo cargar HorrorCorps.ttf");
-            macabreFont = new Font(Font.SANS_SERIF, Font.BOLD, 60);
+            macabreFont = normalFont;
         }
 
         // 2. Configurar Layout
@@ -123,8 +120,7 @@ public class PanelMenu extends JPanel {
 
         add(buttonPanel, gbc);
 
-        // 4. Lógica de Ciclo de Estados
-        setupStateCycle();
+        // 4. Ciclo automático desactivado - Controlado ahora por Mouse Hover
 
         // Iniciar timer para la animación a 60 FPS (~16ms)
         startTime = System.currentTimeMillis();
@@ -132,42 +128,6 @@ public class PanelMenu extends JPanel {
         animationTimer.start();
     }
 
-    /**
-     * Configura el ciclo de temporizadores para alternar entre los estados:
-     * NORMAL (5s) -> LIGHTNING_FLASH (200ms) -> MACABRE (2s) -> Repeat
-     */
-    private void setupStateCycle() {
-        stateCycleTimer = new Timer(3000, null);
-        stateCycleTimer.addActionListener(e -> {
-            if (currentState == MenuAnimationState.NORMAL) {
-                currentState = MenuAnimationState.GLITCH_TRANSITION;
-                glitchStartTime = System.currentTimeMillis();
-                transitionDuration = 3000; // La Corrosión Entrópica dura 3s
-                stateCycleTimer.setInitialDelay(transitionDuration);
-                stateCycleTimer.restart();
-            } else if (currentState == MenuAnimationState.GLITCH_TRANSITION) {
-                currentState = MenuAnimationState.MACABRE;
-                macabreStartTime = System.currentTimeMillis();
-                stateCycleTimer.setInitialDelay(2000);
-                stateCycleTimer.restart();
-            } else if (currentState == MenuAnimationState.MACABRE) {
-                currentState = MenuAnimationState.NORMALIZATION_TRANSITION;
-                glitchStartTime = System.currentTimeMillis(); // Reutilizar para tiempo de restauración
-                transitionDuration = 2000; // 2s para restaurar
-                stateCycleTimer.setInitialDelay(transitionDuration);
-                stateCycleTimer.restart();
-            } else if (currentState == MenuAnimationState.NORMALIZATION_TRANSITION) {
-                currentState = MenuAnimationState.NORMAL;
-                stateCycleTimer.setInitialDelay(3000);
-                stateCycleTimer.restart();
-            }
-            repaint();
-            for (JButton btn : menuButtons) {
-                btn.repaint();
-            }
-        });
-        stateCycleTimer.start();
-    }
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -219,22 +179,8 @@ public class PanelMenu extends JPanel {
             g2d.drawImage(normalImage, x, y, drawWidth, drawHeight, this);
         }
 
-        // Título con fuente Luvable y relieve
-        g2d.setFont(normalFont);
-        FontMetrics fm = g2d.getFontMetrics();
-        int startX = (getWidth() - fm.stringWidth(title)) / 2;
-        int textY = 320;
-
-        g2d.setColor(Color.BLACK);
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dy = -2; dy <= 2; dy++) {
-                if (dx != 0 || dy != 0) {
-                    g2d.drawString(title, startX + dx, textY + dy);
-                }
-            }
-        }
-        g2d.setColor(Color.WHITE);
-        g2d.drawString(title, startX, textY);
+        // Título Multilínea con Distribución Cinematográfica
+        drawMultiLineTitle(g2d, Color.WHITE, Color.BLACK, 0, 0, 290);
     }
 
     private void renderGlitch(Graphics2D g2d, String title) {
@@ -327,25 +273,19 @@ public class PanelMenu extends JPanel {
     }
 
     private void renderRGBSplit(Graphics2D g2d, String title, int offset, float alpha) {
-        g2d.setFont(normalFont);
-        FontMetrics fm = g2d.getFontMetrics();
-        int startX = (getWidth() - fm.stringWidth(title)) / 2;
-        int textY = 320;
-
         Composite oldComp = g2d.getComposite();
         if (alpha < 1.0f) g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
 
-        // Canal Rojo
-        g2d.setColor(new Color(255, 0, 0, 120));
-        g2d.drawString(title, startX - offset, textY + (int)(Math.random()*4));
-        
-        // Canal Azul
-        g2d.setColor(new Color(0, 0, 255, 120));
-        g2d.drawString(title, startX + offset, textY - (int)(Math.random()*4));
+        int randY = (int)(Math.random() * 4);
 
-        // Blanco principal
-        g2d.setColor(Color.WHITE);
-        g2d.drawString(title, startX, textY);
+        // Canal Rojo Split Multilínea
+        drawMultiLineTitle(g2d, new Color(255, 0, 0, 120), null, -offset, randY, 290);
+        
+        // Canal Azul Split Multilínea
+        drawMultiLineTitle(g2d, new Color(0, 0, 255, 120), null, offset, -randY, 290);
+
+        // Centro Blanco principal Multilínea
+        drawMultiLineTitle(g2d, Color.WHITE, null, 0, 0, 290);
 
         g2d.setComposite(oldComp);
     }
@@ -385,12 +325,8 @@ public class PanelMenu extends JPanel {
         }
 
         // Título: Recuperación de brillo
-        g2d.setFont(normalFont);
-        FontMetrics fm = g2d.getFontMetrics();
-        int startX = (getWidth() - fm.stringWidth(title)) / 2;
-        int textY = 320;
-        g2d.setColor(Color.WHITE);
-        g2d.drawString(title, startX, textY);
+        // Título Recuperado Multilínea
+        drawMultiLineTitle(g2d, Color.WHITE, Color.BLACK, 0, 0, 290);
 
         // Barrido de Luz Purificador (Efecto de escaneo blanco)
         g2d.setColor(new Color(255, 255, 255, (int)(100 * (1.0 - progress))));
@@ -399,8 +335,7 @@ public class PanelMenu extends JPanel {
     }
 
     private void renderMacabre(Graphics2D g2d, String title) {
-        long currentTime = System.currentTimeMillis();
-        float entryAlpha = Math.min(1.0f, (currentTime - macabreStartTime) / 500f); // Fade-in de 500ms
+        float entryAlpha = 1.0f; // Instantáneo, sin retraso visual
 
         // Nuevo Fondo Macabro
         if (macabreBackgroundImage != null) {
@@ -429,24 +364,8 @@ public class PanelMenu extends JPanel {
             g2d.drawImage(macabreImage, x, y, drawWidth, drawHeight, this);
         }
 
-        // Título con fuente Luvable y relieve (igual al Menú 1)
-        g2d.setFont(normalFont);
-        FontMetrics fm = g2d.getFontMetrics();
-        int startX = (getWidth() - fm.stringWidth(title)) / 2;
-        int textY = 320;
-
-        // Relieve Negro
-        g2d.setColor(Color.BLACK);
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dy = -2; dy <= 2; dy++) {
-                if (dx != 0 || dy != 0) {
-                    g2d.drawString(title, startX + dx, textY + dy);
-                }
-            }
-        }
-        // Texto principal blanco
-        g2d.setColor(Color.WHITE);
-        g2d.drawString(title, startX, textY);
+        // Título Macabro Multilínea alineado
+        drawMultiLineTitle(g2d, Color.WHITE, Color.BLACK, 0, 0, 290);
 
         g2d.setComposite(oldComp);
     }
@@ -542,15 +461,44 @@ public class PanelMenu extends JPanel {
         boton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                if (currentState == MenuAnimationState.NORMAL) boton.repaint();
+                // Cambio INMEDIATO a estado Macabro al poner el mouse sobre cualquier botón
+                currentState = MenuAnimationState.MACABRE;
+                macabreStartTime = System.currentTimeMillis();
+                PanelMenu.this.repaint(); 
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                if (currentState == MenuAnimationState.NORMAL) boton.repaint();
+                // Retorno instantáneo al estado Normal al salir
+                currentState = MenuAnimationState.NORMAL;
+                PanelMenu.this.repaint();
             }
         });
 
         return boton;
+    }
+
+    private void drawMultiLineTitle(Graphics2D g2d, Color fill, Color stroke, int xOff, int yOff, int yBase) {
+        String[] lines = {"THE", "DOPO", "HARDEST GAME"};
+        float[] sizes = {40f, 150f, 45f};
+        int[] yDiffs = {0, 125, 185}; // Aumentado el espaciado vertical
+        
+        for (int i = 0; i < 3; i++) {
+            g2d.setFont(normalFont.deriveFont(sizes[i]));
+            FontMetrics fm = g2d.getFontMetrics();
+            int x = (getWidth() - fm.stringWidth(lines[i])) / 2 + xOff;
+            int y = (yBase - 20) + yDiffs[i] + yOff; // Ajustar base 20px arriba para compensar expansión
+            
+            if (stroke != null) {
+                g2d.setColor(stroke);
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dy = -2; dy <= 2; dy++) {
+                        if (dx != 0 || dy != 0) g2d.drawString(lines[i], x + dx, y + dy);
+                    }
+                }
+            }
+            g2d.setColor(fill);
+            g2d.drawString(lines[i], x, y);
+        }
     }
 }
