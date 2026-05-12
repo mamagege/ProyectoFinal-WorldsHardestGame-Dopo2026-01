@@ -45,18 +45,16 @@ public class PanelMenu extends JPanel {
     private int transitionDuration;
 
     // Contenedor de botones
-    private List<JButton> menuButtons = new ArrayList<>();
 
     public PanelMenu(VentanaPrincipal ventana) {
         this.ventana = ventana;
 
         // 1. Carga de Recursos (Fuentes e Imágenes)
         try {
-            // Carga optimizada para GIFs animados usando ImageIcon para preservar la reproducción secuencial
-            backgroundImage = new ImageIcon("src/resources/images/fondo_animado.gif").getImage();
+            backgroundImage = ImageIO.read(new File("src/resources/images/fondo_arcoiris.png"));
             macabreBackgroundImage = ImageIO.read(new File("src/resources/images/fondo_macabro.png"));
-        } catch (Exception e) {
-            System.err.println("Advertencia: No se pudieron cargar los fondos (Animado / Macabro)");
+        } catch (IOException e) {
+            System.err.println("Advertencia: No se pudieron cargar los fondos");
         }
 
         try {
@@ -95,29 +93,24 @@ public class PanelMenu extends JPanel {
         buttonPanel.setOpaque(false);
 
         // 3. Instanciar botones dinámicos
-        JButton btnNuevaPartida = crearBoton("NUEVA PARTIDA");
-        JButton btnContinuar = crearBoton("CONTINUAR");
-        JButton btnOpciones = crearBoton("OPCIONES");
-        JButton btnSalir = crearBoton("SALIR");
+        // 3. Instanciar Botones Infernales (Arquitectura Ghost Button)
+        BotonInfernal btnNuevaPartida = new BotonInfernal("NUEVA PARTIDA", normalFont, Color.RED);
+        BotonInfernal btnCargar = new BotonInfernal("CARGAR PARTIDA", normalFont, Color.ORANGE);
+        BotonInfernal btnOpciones = new BotonInfernal("OPCIONES", normalFont, Color.LIGHT_GRAY);
+        BotonInfernal btnSalir = new BotonInfernal("ABANDONAR ESPERANZA", normalFont, new Color(139, 0, 0));
 
-        // Configurar acciones
+        // Configurar acciones de dominio
         btnNuevaPartida.addActionListener(e -> {
             ventana.getGameOrchestrator().resetGame();
             ventana.mostrarPanel("JUEGO");
         });
         btnSalir.addActionListener(e -> System.exit(0));
 
-        // Añadir botones al panel
-        buttonPanel.add(btnNuevaPartida);
-        buttonPanel.add(btnOpciones);
-        buttonPanel.add(btnContinuar);
-        buttonPanel.add(btnSalir);
-
-        // Registrar botones para actualizarlos globalmente
-        menuButtons.add(btnNuevaPartida);
-        menuButtons.add(btnOpciones);
-        menuButtons.add(btnContinuar);
-        menuButtons.add(btnSalir);
+        // Registrar orquestación visual global en Grid 2x2
+        registrarBotonInfernal(btnNuevaPartida, buttonPanel);
+        registrarBotonInfernal(btnOpciones, buttonPanel);
+        registrarBotonInfernal(btnCargar, buttonPanel);
+        registrarBotonInfernal(btnSalir, buttonPanel);
 
         add(buttonPanel, gbc);
 
@@ -374,95 +367,15 @@ public class PanelMenu extends JPanel {
     /**
      * Crea un botón que adapta su visualización al estado actual del menú.
      */
-    private JButton crearBoton(String texto) {
-        JButton boton = new JButton(texto) {
-            @Override
-            public Dimension getPreferredSize() {
-                // Usar siempre la fuente Normal para mantener el tamaño constante
-                Font f = (normalFont != null) ? normalFont.deriveFont(Font.BOLD, 36f) : new Font(Font.SANS_SERIF, Font.BOLD, 36);
-                FontMetrics fm = getFontMetrics(f);
-                int w = fm.stringWidth(getText()) + 40;
-                int h = fm.getHeight() + 20;
-                return new Dimension(w, h);
-            }
-
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-                String text = getText();
-
-                if (currentState == MenuAnimationState.NORMAL) {
-                    g2d.setFont(normalFont.deriveFont(32f));
-                    FontMetrics fmN = g2d.getFontMetrics();
-                    int xN = (getWidth() - fmN.stringWidth(text)) / 2;
-                    int yN = (getHeight() + fmN.getAscent()) / 2 - 4;
-
-                    // Relieve
-                    g2d.setColor(Color.BLACK);
-                    for (int dx = -2; dx <= 2; dx++) {
-                        for (int dy = -2; dy <= 2; dy++) {
-                            if (dx != 0 || dy != 0) g2d.drawString(text, xN + dx, yN + dy);
-                        }
-                    }
-                    // Texto principal con Hover
-                    g2d.setColor(getModel().isRollover() ? new Color(255, 50, 50) : Color.WHITE);
-                    g2d.drawString(text, xN, yN);
-                } else if (currentState == MenuAnimationState.GLITCH_TRANSITION) {
-                    // No dibujar texto o dibujar solo ráfagas
-                    if (Math.random() > 0.7) {
-                        g2d.setFont(normalFont.deriveFont(32f));
-                        g2d.setColor(new Color(255, 0, 0, 100));
-                        g2d.drawString(text, (getWidth() - g2d.getFontMetrics().stringWidth(text))/2 + (int)(Math.random()*10-5), getHeight()/2);
-                    }
-                } else if (currentState == MenuAnimationState.MACABRE) {
-                    // Misma fuente que Menú 1 (Luvable)
-                    g2d.setFont(normalFont.deriveFont(32f));
-                    FontMetrics fmM = g2d.getFontMetrics();
-                    int xM = (getWidth() - fmM.stringWidth(text)) / 2;
-                    int yM = (getHeight() + fmM.getAscent()) / 2 - 4;
-                    
-                    // Añadir contorno negro para legibilidad
-                    g2d.setColor(Color.BLACK);
-                    for (int dx = -2; dx <= 2; dx++) {
-                        for (int dy = -2; dy <= 2; dy++) {
-                            if (dx != 0 || dy != 0) g2d.drawString(text, xM + dx, yM + dy);
-                        }
-                    }
-
-                    // Añadir hover para que sean "funcionales" visualmente
-                    if (getModel().isRollover()) {
-                        g2d.setColor(new Color(255, 50, 50)); // Rojo en hover
-                    } else {
-                        g2d.setColor(new Color(220, 220, 220)); // Blanco/Gris claro para contraste
-                    }
-                    g2d.drawString(text, xM, yM);
-                } else if (currentState == MenuAnimationState.NORMALIZATION_TRANSITION) {
-                    // Los botones ya vuelven a su estilo normal suavemente
-                    g2d.setFont(normalFont.deriveFont(32f));
-                    FontMetrics fmR = g2d.getFontMetrics();
-                    int xR = (getWidth() - fmR.stringWidth(text)) / 2;
-                    int yR = (getHeight() + fmR.getAscent()) / 2 - 4;
-                    g2d.setColor(Color.WHITE);
-                    g2d.drawString(text, xR, yR);
-                }
-                g2d.dispose();
-            }
-        };
-
-        boton.setContentAreaFilled(false);
-        boton.setFocusPainted(false);
-        boton.setOpaque(false);
-        boton.setBorderPainted(false);
-        boton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
+    /**
+     * Centraliza la inyección de comportamiento global del menú que reacciona
+     * simultáneamente al estado interno de proximidad de cada BotonInfernal.
+     */
+    private void registrarBotonInfernal(BotonInfernal boton, JPanel contenedor) {
         boton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                // Cambio INMEDIATO a estado Macabro al poner el mouse sobre cualquier botón
+                // Gatillo para la metamorfosis del fondo y atmósfera global
                 currentState = MenuAnimationState.MACABRE;
                 macabreStartTime = System.currentTimeMillis();
                 PanelMenu.this.repaint(); 
@@ -470,13 +383,12 @@ public class PanelMenu extends JPanel {
 
             @Override
             public void mouseExited(MouseEvent e) {
-                // Retorno instantáneo al estado Normal al salir
+                // Retorno atmosférico a estado Normal
                 currentState = MenuAnimationState.NORMAL;
                 PanelMenu.this.repaint();
             }
         });
-
-        return boton;
+        contenedor.add(boton);
     }
 
     private void drawMultiLineTitle(Graphics2D g2d, Color fill, Color stroke, int xOff, int yOff, int yBase) {
@@ -488,7 +400,7 @@ public class PanelMenu extends JPanel {
             g2d.setFont(normalFont.deriveFont(sizes[i]));
             FontMetrics fm = g2d.getFontMetrics();
             int x = (getWidth() - fm.stringWidth(lines[i])) / 2 + xOff;
-            int y = (yBase - 20) + yDiffs[i] + yOff; // Ajustar base 20px arriba para compensar expansión
+            int y = (yBase + 30) + yDiffs[i] + yOff; // Desplazar todo el conjunto hacia abajo
             
             if (stroke != null) {
                 g2d.setColor(stroke);
