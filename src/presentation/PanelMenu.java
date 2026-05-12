@@ -52,10 +52,11 @@ public class PanelMenu extends JPanel {
 
         // 1. Carga de Recursos (Fuentes e Imágenes)
         try {
-            backgroundImage = ImageIO.read(new File("src/resources/images/fondo_arcoiris.png"));
+            // Carga optimizada para GIFs animados usando ImageIcon para preservar la reproducción secuencial
+            backgroundImage = new ImageIcon("src/resources/images/fondo_animado.gif").getImage();
             macabreBackgroundImage = ImageIO.read(new File("src/resources/images/fondo_macabro.png"));
-        } catch (IOException e) {
-            System.err.println("Advertencia: No se pudieron cargar los fondos");
+        } catch (Exception e) {
+            System.err.println("Advertencia: No se pudieron cargar los fondos (Animado / Macabro)");
         }
 
         try {
