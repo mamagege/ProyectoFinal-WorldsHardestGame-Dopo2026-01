@@ -537,7 +537,7 @@ public class PanelMenu extends JPanel {
             char[] chars = lines[i].toCharArray();
             int totalWidth = fm.stringWidth(lines[i]);
 
-            // Ángulo total que abarca el texto = longitud del arco / radio
+            // Angulo total que abarca el texto = longitud del arco / radio
             double totalAngle = totalWidth / radius;
             double startAngle = -totalAngle / 2.0; // Centrado simétrico
 

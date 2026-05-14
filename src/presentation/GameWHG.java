@@ -43,7 +43,7 @@ public class GameWHG {
         // El Nivel 0 (Selección) es un HUB visual especial cargado internamente
         levels.add(buildSelectionLevel());
 
-        // CARGA DINÁMICA: Escanear disco para niveles 1+ secuencialmente
+        // CARGA DINAMICA: Escanear disco para niveles 1+ secuencialmente
         for (int i = 1; i <= 30; i++) {
             try {
                 levels.add(levelLoader.loadLevel(i));

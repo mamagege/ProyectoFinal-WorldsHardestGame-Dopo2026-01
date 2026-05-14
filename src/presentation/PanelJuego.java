@@ -202,7 +202,7 @@ public class PanelJuego extends JPanel {
         }
 
         if (level.isSelectionLevel()) {
-            // 1. RENDERIZAR TÍTULO GRANDE DE MODALIDAD (HellraiserBloody)
+            // 1. RENDERIZAR TITULO GRANDE DE MODALIDAD (HellraiserBloody)
             if (titleFont != null) {
                 g2d.setFont(titleFont.deriveFont(Font.PLAIN, 70f));
                 String title = "SELECCIONA LA MODALIDAD";
@@ -255,7 +255,7 @@ public class PanelJuego extends JPanel {
                 }
             }
 
-            // 3. SISTEMA DE PARTÍCULAS DINÁMICAS (FLARES FLOTANTES)
+            // 3. SISTEMA DE PARTICULAS DINAMICAS (FLARES FLOTANTES)
             for (ModalityZone mz : level.getModalityZones()) {
                 Color pColor;
                 switch (mz.getModality()) {
@@ -480,7 +480,7 @@ public class PanelJuego extends JPanel {
             g2d.setColor(Color.BLACK);
             g2d.drawOval(eyeRightX, eyeY, eyeSize, eyeSize);
 
-            // Pupilas (ESTRICTAMENTE CENTRADAS MATEMÁTICAMENTE)
+            // Pupilas (ESTRICTAMENTE CENTRADAS MATEMATICAMENTE)
             int pupilSize = Math.max(2, (int) Math.round(eyeSize / 3.0));
             int pOffset = (int) Math.round((eyeSize - pupilSize) / 2.0);
             g2d.fillOval(eyeLeftX + pOffset, eyeY + pOffset, pupilSize, pupilSize);
