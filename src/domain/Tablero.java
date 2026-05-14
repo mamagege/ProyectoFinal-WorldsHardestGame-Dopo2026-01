@@ -15,11 +15,17 @@ public class Tablero {
     private double boardWidth;
     private double boardHeight;
     
-    // Límites dinámicos para clamping (por defecto cubren todo el tablero)
+    // Límites dinámicos para clamping de obstáculos (por defecto cubren todo el tablero)
     private double minX = 0;
     private double maxX;
     private double minY = 0;
     private double maxY;
+
+    // Límites de baldosas para clamping EXCLUSIVO del personaje (delineado rojo)
+    private double tileMinX = -1;
+    private double tileMaxX = -1;
+    private double tileMinY = -1;
+    private double tileMaxY = -1;
 
     private Character character;
     private List<Obstacle> obstacles;
@@ -47,7 +53,7 @@ public class Tablero {
     }
 
     /**
-     * Permite establecer límites restrictivos invisibles dentro del tablero.
+     * Permite establecer límites restrictivos invisibles dentro del tablero (para obstáculos).
      */
     public void setClampingBounds(double minX, double maxX, double minY, double maxY) {
         this.minX = minX;
@@ -57,17 +63,50 @@ public class Tablero {
     }
 
     /**
-     * Restringe la coordenada X para mantener el elemento dentro de los límites definidos.
+     * Define los límites exactos del área de baldosas para restringir al personaje
+     * exactamente al delineado rojo (independiente de los límites del tablero).
+     */
+    public void setTileBounds(double minX, double maxX, double minY, double maxY) {
+        this.tileMinX = minX;
+        this.tileMaxX = maxX;
+        this.tileMinY = minY;
+        this.tileMaxY = maxY;
+    }
+
+    /**
+     * Clamp para obstáculos: usa los límites del tablero completo.
      */
     public double clampX(double x, double elementWidth) {
         return Math.max(minX, Math.min(x, maxX - elementWidth));
     }
 
     /**
-     * Restringe la coordenada Y para mantener el elemento dentro de los límites definidos.
+     * Clamp para obstáculos: usa los límites del tablero completo.
      */
     public double clampY(double y, double elementHeight) {
         return Math.max(minY, Math.min(y, maxY - elementHeight));
+    }
+
+    /**
+     * Clamp EXCLUSIVO del personaje: usa los límites de las baldosas (= delineado rojo).
+     * Si no se configuraron tileBounds, cae sobre clampX.
+     */
+    public double clampCharacterX(double x, double elementWidth) {
+        if (tileMinX >= 0) {
+            return Math.max(tileMinX, Math.min(x, tileMaxX - elementWidth));
+        }
+        return clampX(x, elementWidth);
+    }
+
+    /**
+     * Clamp EXCLUSIVO del personaje: usa los límites de las baldosas (= delineado rojo).
+     * Si no se configuraron tileBounds, cae sobre clampY.
+     */
+    public double clampCharacterY(double y, double elementHeight) {
+        if (tileMinY >= 0) {
+            return Math.max(tileMinY, Math.min(y, tileMaxY - elementHeight));
+        }
+        return clampY(y, elementHeight);
     }
 
     // Getters y Setters de Componentes

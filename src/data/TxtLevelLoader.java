@@ -130,6 +130,21 @@ public class TxtLevelLoader implements LevelLoader {
         Level constructedLevel = new Level(tablero);
         constructedLevel.setTiles(tiles);
 
+        // Calcular los límites reales del área jugable desde las baldosas.
+        // Esto hace que el clamp EXCLUSIVO del personaje coincida exactamente con el delineado rojo
+        // en lugar de usar boardWidth/boardHeight (que incluye el ancho de las paredes de borde).
+        if (!tiles.isEmpty()) {
+            double minTX = Double.MAX_VALUE, minTY = Double.MAX_VALUE;
+            double maxTX = 0, maxTY = 0;
+            for (Tile t : tiles) {
+                if (t.getPositionX()                  < minTX) minTX = t.getPositionX();
+                if (t.getPositionY()                  < minTY) minTY = t.getPositionY();
+                if (t.getPositionX() + t.getWidth()   > maxTX) maxTX = t.getPositionX() + t.getWidth();
+                if (t.getPositionY() + t.getHeight()  > maxTY) maxTY = t.getPositionY() + t.getHeight();
+            }
+            tablero.setTileBounds(minTX, maxTX, minTY, maxTY);
+        }
+
         return constructedLevel;
     }
 

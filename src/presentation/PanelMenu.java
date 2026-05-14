@@ -99,10 +99,10 @@ public class PanelMenu extends JPanel {
         JButton btnOpciones = crearBoton("OPCIONES");
         JButton btnSalir = crearBoton("SALIR");
 
-        // Configurar acciones directas (Transicion al panel de seleccion de personaje)
+        // Configurar acciones directas (Transicion al splash antes de la seleccion de modalidad)
         btnJugar.addActionListener(e -> {
-            // Ir a la pantalla de seleccion de personaje
-            ventana.mostrarPanel("SELECCION");
+            ventana.getPanelSplashLimbo().startSequence();
+            ventana.mostrarPanel("SPLASH_LIMBO");
         });
 
         btnSalir.addActionListener(e -> System.exit(0));

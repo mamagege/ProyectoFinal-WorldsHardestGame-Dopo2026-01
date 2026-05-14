@@ -75,7 +75,7 @@ public class Level {
         character.updatePositionX();
         
         // APLICAR CLAMP ESPACIAL EN X
-        character.setPositionX(tablero.clampX(character.getPositionX(), character.getWidth()));
+        character.setPositionX(tablero.clampCharacterX(character.getPositionX(), character.getWidth()));
         
         for (Wall wall : tablero.getWalls()) {
             if (CollisionDetector.checkCollision(character, wall)) {
@@ -89,7 +89,7 @@ public class Level {
         character.updatePositionY();
         
         // APLICAR CLAMP ESPACIAL EN Y
-        character.setPositionY(tablero.clampY(character.getPositionY(), character.getHeight()));
+        character.setPositionY(tablero.clampCharacterY(character.getPositionY(), character.getHeight()));
 
         for (Wall wall : tablero.getWalls()) {
             if (CollisionDetector.checkCollision(character, wall)) {

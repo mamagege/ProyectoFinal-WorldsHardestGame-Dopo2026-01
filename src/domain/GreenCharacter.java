@@ -9,13 +9,16 @@ package domain;
  */
 public class GreenCharacter extends Character {
     public GreenCharacter(double positionX, double positionY) {
-        super(positionX, positionY, 0.75, 0.75, 1.0 * BASE_SPEED);
+        super(positionX, positionY, 0.9375, 0.9375, 0.40 * BASE_SPEED);
         this.hasArmor = true;
     }
 
     @Override
     public void removeArmor() {
         super.removeArmor();
-        this.speed = 0.7 * BASE_SPEED;
+        // Al recibir daño: más grande y más lento
+        this.width = 1.125;
+        this.height = 1.125;
+        this.speed = 0.25 * BASE_SPEED;
     }
 }

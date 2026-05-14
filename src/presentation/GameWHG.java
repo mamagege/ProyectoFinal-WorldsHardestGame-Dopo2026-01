@@ -203,9 +203,8 @@ public class GameWHG {
             currentLevel = levels.get(currentLevelIndex);
         }
 
-        // 4. Lanzar cinematica de precarga del nivel y mostrar el juego
-        mainWindow.getPanelSplashLimbo().startSequence();
-        mainWindow.mostrarPanel("SPLASH_LIMBO");
+        // 4. Mostrar el juego directamente sin repetir el splash limbo
+        mainWindow.mostrarPanel("JUEGO");
     }
 
     private void prepareActions() {
@@ -230,9 +229,12 @@ public class GameWHG {
                     if (CollisionDetector.checkCollision(currentLevel.getCharacter(), zone)) {
                         this.currentModality = zone.getModality();
                         System.out.println("Modalidad seleccionada: " + this.currentModality);
-                        // Cargar el primer nivel de juego real (Index 1)
-                        currentLevelIndex = 1;
-                        currentLevel = levels.get(currentLevelIndex);
+                        // Resetear posición del personaje para evitar multiples colisiones mientras se está en otra pantalla
+                        currentLevel.getCharacter().setPositionX(24.0);
+                        currentLevel.getCharacter().setPositionY(22.0);
+                        
+                        // Ir a la pantalla de selección de personaje
+                        mainWindow.mostrarPanel("SELECCION");
                         return;
                     }
                 }

@@ -32,14 +32,15 @@ import javax.imageio.ImageIO;
 public class PanelJuego extends JPanel {
     private VentanaPrincipal ventana;
     private GameWHG gameOrchestrator;
-    private final int TAMANO_CELDA = 40;
+    private final int TAMANO_CELDA = 56; // 56px por unidad lógica → personaje rojo 1.0 ocupa ~75% de la baldosa
     private JLabel labelMuertes;
     private JLabel labelNivel;
     private JPanel barraSuperior;
     private Font gameFont;
     private double zoomLevel = 1.0;
     private Modality activeModality = null;
-    private Image backgroundImage;
+    private Image backgroundImage;        // Fondo del nivel de selección de modalidad
+    private Image level1BackgroundImage;  // Fondo del nivel 1 real
     private Image modalityPlayerImage;
     private Font titleFont;
     private Font modalityDescFont;
@@ -121,7 +122,11 @@ public class PanelJuego extends JPanel {
         } catch (IOException e) {
             System.err.println("Advertencia: No se pudo cargar fondo_limbo.png");
         }
-
+        try {
+            level1BackgroundImage = ImageIO.read(new File("src/resources/images/nivel1_fondo.jpg"));
+        } catch (IOException e) {
+            System.err.println("Advertencia: No se pudo cargar nivel1_fondo.jpg");
+        }
     }
 
     public void actualizarInterfaz() {
@@ -136,7 +141,8 @@ public class PanelJuego extends JPanel {
 
             if (visible) {
                 labelMuertes.setText("Deaths: " + level.getCharacter().getDeaths() + "  ");
-                labelNivel.setText("Nivel: " + (gameOrchestrator.getCurrentLevelIndex() + 1) + "/30");
+                // El índice 0 es el nivel de selección (decorativo); el índice 1 = Nivel 1 real
+                labelNivel.setText("Nivel: " + gameOrchestrator.getCurrentLevelIndex() + "/30");
             }
         }
         repaint();
@@ -154,6 +160,12 @@ public class PanelJuego extends JPanel {
         // 1. Fondo de pantalla (Ocupa siempre el 100% de la ventana física)
         if (level.isSelectionLevel() && backgroundImage != null) {
             g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+        } else if (!level.isSelectionLevel()) {
+            // Fondo del nivel real: nivel1_fondo.jpg para el nivel 1 (y futuros niveles)
+            Image nivelFondo = level1BackgroundImage; // Por ahora solo nivel 1 tiene fondo específico
+            if (nivelFondo != null) {
+                g2d.drawImage(nivelFondo, 0, 0, getWidth(), getHeight(), this);
+            }
         }
 
         // Dimensiones de dibujo
@@ -188,9 +200,7 @@ public class PanelJuego extends JPanel {
         // SISTEMA RESPONSIVE TOTAL PARA EL HUB DE SELECCIÓN
         if (level.isSelectionLevel()) {
             // BLOQUEO DE PERSPECTIVA ABSOLUTO: Escalar el contexto para que la cuadrícula
-            // lógica
-            // (48x27) ocupe EXACTAMENTE el 100% de la ventana, alineándose con el fondo
-            // estirado.
+            // lógica (48x27) ocupe EXACTAMENTE el 100% de la ventana
             oldTransform = g2d.getTransform();
             double scaleX = (double) vWidth / mapWidth;
             double scaleY = (double) vHeight / mapHeight;
@@ -199,6 +209,33 @@ public class PanelJuego extends JPanel {
             // Al estar escalado a nivel ventana, las coordenadas locales nacen en 0,0
             offsetX = 0;
             offsetY = 0;
+        } else {
+            // Borde rojo: calculado desde los límites reales de las BALDOSAS, no del Tablero completo
+            // (el Tablero incluye las paredes de la periferia; las baldosas son solo el área jugable)
+            if (!level.getTiles().isEmpty()) {
+                int minTX = Integer.MAX_VALUE, minTY = Integer.MAX_VALUE;
+                int maxTX = Integer.MIN_VALUE, maxTY = Integer.MIN_VALUE;
+                for (Tile t : level.getTiles()) {
+                    int tx  = (int) t.getPositionX();
+                    int ty  = (int) t.getPositionY();
+                    int tx2 = (int) Math.ceil(t.getPositionX() + t.getWidth());
+                    int ty2 = (int) Math.ceil(t.getPositionY() + t.getHeight());
+                    if (tx  < minTX) minTX = tx;
+                    if (ty  < minTY) minTY = ty;
+                    if (tx2 > maxTX) maxTX = tx2;
+                    if (ty2 > maxTY) maxTY = ty2;
+                }
+                int bx = offsetX + minTX * TAMANO_CELDA;
+                int by = offsetY + minTY * TAMANO_CELDA;
+                int bw = (maxTX - minTX) * TAMANO_CELDA;
+                int bh = (maxTY - minTY) * TAMANO_CELDA;
+
+                g2d.setColor(new Color(210, 30, 30));
+                java.awt.Stroke prevStroke = g2d.getStroke();
+                g2d.setStroke(new BasicStroke(4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2d.drawRect(bx, by, bw, bh);
+                g2d.setStroke(prevStroke);
+            }
         }
 
         if (level.isSelectionLevel()) {
@@ -386,20 +423,8 @@ public class PanelJuego extends JPanel {
             zoomLevel = Math.max(1.0, zoomLevel - 0.02);
         }
 
-        // 2. PAREDES (Solo se dibujan como bloques si NO es nivel de selección)
-        if (!level.isSelectionLevel()) {
-            for (Wall pared : level.getWalls()) {
-                int px = offsetX + (int) (pared.getPositionX() * TAMANO_CELDA);
-                int py = offsetY + (int) (pared.getPositionY() * TAMANO_CELDA);
-                int pw = (int) (pared.getWidth() * TAMANO_CELDA);
-                int ph = (int) (pared.getHeight() * TAMANO_CELDA);
-
-                g2d.setColor(Color.DARK_GRAY);
-                g2d.fillRect(px, py, pw, ph);
-                g2d.setColor(Color.BLACK);
-                g2d.drawRect(px, py, pw, ph);
-            }
-        }
+        // 2. PAREDES — no se renderizan visualmente; la física sigue activa en el dominio.
+        // Solo en el nivel de selección seguimos sin dibujarlas.
 
         // 3. Monedas
         g2d.setColor(Color.YELLOW);
@@ -436,68 +461,61 @@ public class PanelJuego extends JPanel {
                 g2d.fillRect(px, py, pw, ph);
             }
         } else {
-            if (pJugador.hasArmor()) {
-                g2d.setColor(Color.GREEN); // Mostrar armadura si tiene
-            } else if (pJugador instanceof BlueCharacter) {
-                g2d.setColor(Color.CYAN);
-            } else if (pJugador instanceof WhiteCharacter) {
-                g2d.setColor(Color.WHITE);
-            } else {
-                g2d.setColor(Color.RED);
-            }
-
             int fullW = (int) (pJugador.getWidth() * TAMANO_CELDA);
             int fullH = (int) (pJugador.getHeight() * TAMANO_CELDA);
-            int pw = (int) (fullW * 0.9);
-            int ph = (int) (fullH * 0.9);
-            int px = offsetX + (int) (pJugador.getPositionX() * TAMANO_CELDA) + (fullW - pw) / 2;
-            int py = offsetY + (int) (pJugador.getPositionY() * TAMANO_CELDA) + (fullH - ph) / 2;
+            int pw = fullW;
+            int ph = fullH;
+            int px = offsetX + (int) (pJugador.getPositionX() * TAMANO_CELDA);
+            int py = offsetY + (int) (pJugador.getPositionY() * TAMANO_CELDA);
 
-            g2d.fillRect(px, py, pw, ph);
+            // Borde grueso negro (Fondo)
             g2d.setColor(Color.BLACK);
-            g2d.drawRect(px, py, pw, ph);
+            g2d.fillRect(px, py, pw, ph);
 
-            // Activar antialiasing para garantizar geometría fluida y centrado sub-pixel
-            // perfecto
+            // Interior de color
+            int border = Math.max(2, pw / 16);
+            if (pJugador.hasArmor()) {
+                g2d.setColor(new Color(50, 190, 80)); // GREEN
+            } else if (pJugador instanceof BlueCharacter) {
+                g2d.setColor(new Color(60, 130, 220)); // BLUE
+            } else if (pJugador instanceof WhiteCharacter) {
+                g2d.setColor(Color.WHITE); // WHITE
+            } else {
+                g2d.setColor(new Color(220, 60, 60)); // RED
+            }
+            g2d.fillRect(px + border, py + border, pw - 2*border, ph - 2*border);
+
+            // Activar antialiasing para los ojos
             Object antialiasHint = g2d.getRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING);
             g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
 
-            // --- DETALLE COSMÉTICO: ROSTRO ASUSTADO ---
-            int eyeSize = (int) (pw * 0.28);
-            int eyeY = py + (int) (ph * 0.22);
+            int eyeRadius = (int) (pw * 0.16);
+            int eyeY = py + (int) (ph * 0.35);
 
-            // Ojo Izquierdo (Blanco + Borde)
+            // Centros de los ojos
+            int eyeLeftCX = px + (int) (pw * 0.35);
+            int eyeRightCX = px + (int) (pw * 0.65);
+
+            // Dibujar escleróticas (blanco)
             g2d.setColor(Color.WHITE);
-            int eyeLeftX = px + (int) (pw * 0.15);
-            g2d.fillOval(eyeLeftX, eyeY, eyeSize, eyeSize);
-            g2d.setColor(Color.BLACK);
-            g2d.drawOval(eyeLeftX, eyeY, eyeSize, eyeSize);
-
-            // Ojo Derecho (Blanco + Borde)
-            g2d.setColor(Color.WHITE);
-            int eyeRightX = px + pw - (int) (pw * 0.15) - eyeSize;
-            g2d.fillOval(eyeRightX, eyeY, eyeSize, eyeSize);
-            g2d.setColor(Color.BLACK);
-            g2d.drawOval(eyeRightX, eyeY, eyeSize, eyeSize);
-
-            // Pupilas (ESTRICTAMENTE CENTRADAS MATEMATICAMENTE)
-            int pupilSize = Math.max(2, (int) Math.round(eyeSize / 3.0));
-            int pOffset = (int) Math.round((eyeSize - pupilSize) / 2.0);
-            g2d.fillOval(eyeLeftX + pOffset, eyeY + pOffset, pupilSize, pupilSize);
-            g2d.fillOval(eyeRightX + pOffset, eyeY + pOffset, pupilSize, pupilSize);
-
-            // Boca Triste (Curva muy pronunciada y más baja)
+            g2d.fillOval(eyeLeftCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+            g2d.fillOval(eyeRightCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+            
+            // Dibujar bordes de los ojos
             g2d.setColor(Color.BLACK);
             java.awt.Stroke oldStroke = g2d.getStroke();
-            g2d.setStroke(new java.awt.BasicStroke(2.8f));
-            int mouthW = (int) (pw * 0.28);
-            int mouthH = (int) (ph * 0.30);
-            int mouthX = px + (pw - mouthW) / 2;
-            int mouthY = eyeY + eyeSize + (int) (ph * 0.15);
-            g2d.drawArc(mouthX, mouthY, mouthW, mouthH, 0, 180);
-
-            // Restaurar estados de renderizado
+            g2d.setStroke(new java.awt.BasicStroke(1.5f));
+            g2d.drawOval(eyeLeftCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+            g2d.drawOval(eyeRightCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
             g2d.setStroke(oldStroke);
+
+            // Dibujar pupilas (Mirando al frente de forma neutral/asustada pero estática)
+            int pupilRadius = (int) (eyeRadius * 0.45);
+            g2d.setColor(Color.BLACK);
+            g2d.fillOval(eyeLeftCX - pupilRadius, eyeY - pupilRadius, pupilRadius * 2, pupilRadius * 2);
+            g2d.fillOval(eyeRightCX - pupilRadius, eyeY - pupilRadius, pupilRadius * 2, pupilRadius * 2);
+
+            // Restaurar estado de renderizado
             g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
                     antialiasHint != null ? antialiasHint : java.awt.RenderingHints.VALUE_ANTIALIAS_DEFAULT);
         }

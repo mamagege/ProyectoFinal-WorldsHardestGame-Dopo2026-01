@@ -105,9 +105,11 @@ public class PanelSeleccionPersonaje extends JPanel {
     private void construirUI() {
         // -- Tarjeta ROJO: Rafael
         String[] statsRojo = {
-            "VEL: Media (0.85x)",
-            "TAM: Medio  (0.75)",
-            "ARMADURA: No"
+            "TAM:  ★★★☆☆  (Estándar)",
+            "VEL:  ★★★☆☆  (Estándar)",
+            " ",
+            "El personaje de referencia.",
+            "Equilibrado en todo."
         };
         tarjetaRojo = new TarjetaPersonaje(
             "RAFAEL",
@@ -121,9 +123,11 @@ public class PanelSeleccionPersonaje extends JPanel {
 
         // -- Tarjeta AZUL: Leonardo
         String[] statsAzul = {
-            "VEL: Alta  (1.5x)",
-            "TAM: Alto  (1.125)",
-            "ARMADURA: No"
+            "TAM:  ★★★★☆  (1.25x Grande)",
+            "VEL:  ★★★★★  (1.5x Rápido)",
+            " ",
+            "Rápido y voluminoso.",
+            "Difícil de esquivar obstáculos."
         };
         tarjetaAzul = new TarjetaPersonaje(
             "LEONARDO",
@@ -137,9 +141,12 @@ public class PanelSeleccionPersonaje extends JPanel {
 
         // -- Tarjeta VERDE: Miguel Angelo
         String[] statsVerde = {
-            "VEL: Baja  (1.0 -> 0.7x)",
-            "TAM: Medio (0.75)",
-            "ARMADURA: Si (1 golpe)"
+            "TAM:  ★★★★☆  (1.25x → 1.5x)",
+            "VEL:  ★★☆☆☆  (0.75x → 0.5x)",
+            "ESCUDO: ✔ (1 golpe)",
+            " ",
+            "Al recibir daño, pierde el",
+            "escudo, crece y se ralentiza."
         };
         tarjetaVerde = new TarjetaPersonaje(
             "MIGUEL ANGELO",
@@ -327,8 +334,31 @@ public class PanelSeleccionPersonaje extends JPanel {
             int h = getHeight();
             int arc = 20;
 
-            // 1. Fondo semitransparente de la tarjeta
-            Color fondoBase = new Color(10, 10, 30, 200);
+            // --- FEAR CALCULATION ---
+            float fearRatio = 0f;
+            java.awt.Point mousePos = null;
+            try {
+                if (java.awt.MouseInfo.getPointerInfo() != null) {
+                    mousePos = java.awt.MouseInfo.getPointerInfo().getLocation();
+                    javax.swing.SwingUtilities.convertPointFromScreen(mousePos, this);
+                }
+            } catch (Exception e) {}
+            
+            if (mousePos != null) {
+                double dist = Math.hypot(mousePos.x - w/2.0, mousePos.y - h/2.0);
+                double maxDist = 350.0; // Distancia donde comienza el miedo
+                if (dist < maxDist) {
+                    fearRatio = (float) Math.pow(1.0 - (dist / maxDist), 1.5); // Curva exponencial para mayor intensidad de cerca
+                }
+            }
+
+            // 1. Fondo semitransparente de la tarjeta (Se vuelve rojo con el miedo)
+            int baseR = 10, baseG = 10, baseB = 30;
+            int redR = 180, redG = 0, redB = 0;
+            int finalR = (int) (baseR + (redR - baseR) * fearRatio);
+            int finalG = (int) (baseG + (redG - baseG) * fearRatio);
+            int finalB = (int) (baseB + (redB - baseB) * fearRatio);
+            Color fondoBase = new Color(finalR, finalG, finalB, 200);
             g2d.setColor(fondoBase);
             g2d.fillRoundRect(0, 0, w, h, arc, arc);
 
@@ -345,6 +375,10 @@ public class PanelSeleccionPersonaje extends JPanel {
 
             // 3. Borde (normal -> hover con interpolacion lineal)
             Color borderColor = interpolarColor(colorBordeNormal, colorBordeHover, glowAlpha);
+            // El borde se vuelve rojo vivo si hay mucho miedo
+            if (fearRatio > 0.5f) {
+                borderColor = interpolarColor(borderColor, Color.RED, (fearRatio - 0.5f) * 2f);
+            }
             float borderWidth = 2f + 3f * glowAlpha;
             g2d.setColor(borderColor);
             g2d.setStroke(new BasicStroke(borderWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
@@ -357,7 +391,15 @@ public class PanelSeleccionPersonaje extends JPanel {
             int avatarSize = (int)(w * 0.55);
             int avatarX    = (w - avatarSize) / 2;
             int avatarY    = (int)(h * 0.07);
-            dibujarAvatar(g2d, avatarX, avatarY, avatarSize);
+            
+            // Efecto de temblor basado en el miedo
+            if (fearRatio > 0) {
+                int shakeIntensity = (int) (fearRatio * 8); 
+                avatarX += (Math.random() - 0.5) * shakeIntensity;
+                avatarY += (Math.random() - 0.5) * shakeIntensity;
+            }
+
+            dibujarAvatar(g2d, avatarX, avatarY, avatarSize, fearRatio);
 
             // 5. Nombre del personaje
             g2d.setFont(cardTitleFont);
@@ -401,8 +443,7 @@ public class PanelSeleccionPersonaje extends JPanel {
             g2d.dispose();
         }
 
-        private void dibujarAvatar(Graphics2D g2d, int x, int y, int size) {
-            // Circulo base del color del personaje
+        private void dibujarAvatar(Graphics2D g2d, int x, int y, int size, float fearRatio) {
             Color avatarColor;
             switch (tipoPersonaje) {
                 case PERSONAJE_ROJO:   avatarColor = new Color(220,  60,  60); break;
@@ -413,65 +454,76 @@ public class PanelSeleccionPersonaje extends JPanel {
 
             // Sombra
             g2d.setColor(new Color(0, 0, 0, 100));
-            g2d.fillOval(x + 4, y + 4, size, size);
+            g2d.fillRect(x + 4, y + 4, size, size);
 
-            // Cuerpo
-            g2d.setColor(avatarColor);
-            g2d.fillOval(x, y, size, size);
-
-            // Brillo superior
-            g2d.setColor(new Color(255, 255, 255, 60));
-            g2d.fillOval(x + size / 8, y + size / 12, size / 2, size / 3);
-
-            // Borde
-            g2d.setColor(avatarColor.brighter());
-            g2d.setStroke(new BasicStroke(2.5f));
-            g2d.drawOval(x, y, size, size);
-
-            // Cara: ojos blancos
-            int eyeR = size / 9;
-            int eyeY = y + (int)(size * 0.38);
-            int eyeLeftX  = x + (int)(size * 0.28) - eyeR;
-            int eyeRightX = x + (int)(size * 0.72) - eyeR;
-
-            g2d.setColor(Color.WHITE);
-            g2d.fillOval(eyeLeftX,  eyeY, eyeR * 2, eyeR * 2);
-            g2d.fillOval(eyeRightX, eyeY, eyeR * 2, eyeR * 2);
-
-            // Pupilas
-            int pupilR = eyeR / 2;
+            // Fondo negro (borde grueso)
             g2d.setColor(Color.BLACK);
-            g2d.fillOval(eyeLeftX  + eyeR - pupilR / 2, eyeY + eyeR - pupilR / 2, pupilR, pupilR);
-            g2d.fillOval(eyeRightX + eyeR - pupilR / 2, eyeY + eyeR - pupilR / 2, pupilR, pupilR);
+            g2d.fillRect(x, y, size, size);
 
-            // Boca (distinta segun tipo: sonrisa, seria, escudo)
-            g2d.setStroke(new BasicStroke(2.2f));
-            int mouthW  = size / 4;
-            int mouthX  = x + size / 2 - mouthW / 2;
-            int mouthY  = eyeY + eyeR * 2 + (int)(size * 0.10);
-            int mouthH  = size / 7;
+            // Cuadrado de color interior
+            int border = Math.max(2, size / 16);
+            g2d.setColor(avatarColor);
+            g2d.fillRect(x + border, y + border, size - 2*border, size - 2*border);
 
-            switch (tipoPersonaje) {
-                case PERSONAJE_ROJO:  // Sonrisa media
-                    g2d.drawArc(mouthX, mouthY, mouthW, mouthH, 180, 180);
-                    break;
-                case PERSONAJE_AZUL:  // Boca abierta amplia (arrogante)
-                    g2d.drawArc(mouthX - mouthW / 4, mouthY, mouthW + mouthW / 2, mouthH + 4, 180, 180);
-                    break;
-                case PERSONAJE_VERDE: // Escudo pequeño abajo del avatar
-                    g2d.drawArc(mouthX, mouthY, mouthW, mouthH, 180, 180);
-                    // Icono de escudo
-                    int shX = x + size / 2 - 8;
-                    int shY = y + size - 14;
-                    int shW = 16, shH = 14;
-                    g2d.setColor(new Color(80, 230, 100));
-                    int[] shieldX = { shX, shX + shW / 2, shX + shW };
-                    int[] shieldY = { shY, shY + shH, shY };
-                    g2d.fillPolygon(shieldX, shieldY, 3);
-                    g2d.setColor(new Color(40, 120, 50));
-                    g2d.drawPolygon(shieldX, shieldY, 3);
-                    break;
+            // Brillo superior para mantener estilo UI
+            g2d.setColor(new Color(255, 255, 255, 60));
+            g2d.fillRect(x + border, y + border, size - 2*border, (size - 2*border) / 3);
+
+            // --- ANIMACION DE OJOS SIGUIENDO EL CURSOR ---
+            java.awt.Point mousePos = null;
+            try {
+                if (java.awt.MouseInfo.getPointerInfo() != null) {
+                    mousePos = java.awt.MouseInfo.getPointerInfo().getLocation();
+                    javax.swing.SwingUtilities.convertPointFromScreen(mousePos, this);
+                }
+            } catch (Exception e) {}
+
+            int mouseX = mousePos != null ? mousePos.x : (x + size / 2);
+            int mouseY = mousePos != null ? mousePos.y : (y + size);
+
+            int eyeRadius = (int) (size * 0.16);
+            int eyeY = y + (int) (size * 0.35);
+
+            int eyeLeftCX = x + (int) (size * 0.35);
+            int eyeRightCX = x + (int) (size * 0.65);
+
+            // Escleróticas
+            g2d.setColor(Color.WHITE);
+            g2d.fillOval(eyeLeftCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+            g2d.fillOval(eyeRightCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+
+            g2d.setColor(Color.BLACK);
+            java.awt.Stroke oldStroke = g2d.getStroke();
+            g2d.setStroke(new BasicStroke(1.5f));
+            g2d.drawOval(eyeLeftCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+            g2d.drawOval(eyeRightCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+            g2d.setStroke(oldStroke);
+
+            // Pupilas (se encogen con el miedo)
+            int pupilRadius = (int) (eyeRadius * (0.45f - 0.30f * fearRatio));
+            double maxDist = eyeRadius - pupilRadius - 1;
+            if (maxDist < 0) maxDist = 0;
+
+            // Pupila izquierda
+            double dxL = mouseX - eyeLeftCX;
+            double dyL = mouseY - eyeY;
+            double distL = Math.hypot(dxL, dyL);
+            if (distL > maxDist) {
+                dxL = dxL * maxDist / distL;
+                dyL = dyL * maxDist / distL;
             }
+            g2d.setColor(Color.BLACK);
+            g2d.fillOval((int) (eyeLeftCX + dxL - pupilRadius), (int) (eyeY + dyL - pupilRadius), pupilRadius * 2, pupilRadius * 2);
+
+            // Pupila derecha
+            double dxR = mouseX - eyeRightCX;
+            double dyR = mouseY - eyeY;
+            double distR = Math.hypot(dxR, dyR);
+            if (distR > maxDist) {
+                dxR = dxR * maxDist / distR;
+                dyR = dyR * maxDist / distR;
+            }
+            g2d.fillOval((int) (eyeRightCX + dxR - pupilRadius), (int) (eyeY + dyR - pupilRadius), pupilRadius * 2, pupilRadius * 2);
         }
 
         // Interpolacion lineal entre dos colores
