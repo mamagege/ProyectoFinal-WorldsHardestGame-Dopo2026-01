@@ -320,30 +320,52 @@ public class PanelJuego extends JPanel {
             offsetX = 0;
             offsetY = 0;
         } else {
-            // Borde rojo: calculado desde los límites reales de las BALDOSAS, no del Tablero completo
-            // (el Tablero incluye las paredes de la periferia; las baldosas son solo el área jugable)
+            // Borde rojo inteligente: traza solo los bordes que separan baldosas de espacios vacios/paredes.
+            // Esto produce un contorno que sigue exactamente la forma del camino en vez de un simple rectangulo.
             if (!level.getTiles().isEmpty()) {
-                int minTX = Integer.MAX_VALUE, minTY = Integer.MAX_VALUE;
-                int maxTX = Integer.MIN_VALUE, maxTY = Integer.MIN_VALUE;
+                // Construir set de posiciones de baldosa para lookup O(1)
+                java.util.Set<Long> tileSet = new java.util.HashSet<>();
                 for (Tile t : level.getTiles()) {
-                    int tx  = (int) t.getPositionX();
-                    int ty  = (int) t.getPositionY();
-                    int tx2 = (int) Math.ceil(t.getPositionX() + t.getWidth());
-                    int ty2 = (int) Math.ceil(t.getPositionY() + t.getHeight());
-                    if (tx  < minTX) minTX = tx;
-                    if (ty  < minTY) minTY = ty;
-                    if (tx2 > maxTX) maxTX = tx2;
-                    if (ty2 > maxTY) maxTY = ty2;
+                    int tx = (int) t.getPositionX();
+                    int ty = (int) t.getPositionY();
+                    tileSet.add((long) tx << 16 | (ty & 0xFFFF));
                 }
-                int bx = offsetX + minTX * TAMANO_CELDA;
-                int by = offsetY + minTY * TAMANO_CELDA;
-                int bw = (maxTX - minTX) * TAMANO_CELDA;
-                int bh = (maxTY - minTY) * TAMANO_CELDA;
 
-                g2d.setColor(new Color(210, 30, 30));
+                java.awt.geom.Path2D.Float borderPath = new java.awt.geom.Path2D.Float();
+
+                for (Tile t : level.getTiles()) {
+                    int tx = (int) t.getPositionX();
+                    int ty = (int) t.getPositionY();
+                    int px = offsetX + tx * TAMANO_CELDA;
+                    int py = offsetY + ty * TAMANO_CELDA;
+                    int cs = TAMANO_CELDA;
+
+                    // Borde superior: si la celda de arriba no es baldosa
+                    if (!tileSet.contains((long) tx << 16 | ((ty - 1) & 0xFFFF))) {
+                        borderPath.moveTo(px, py);
+                        borderPath.lineTo(px + cs, py);
+                    }
+                    // Borde inferior: si la celda de abajo no es baldosa
+                    if (!tileSet.contains((long) tx << 16 | ((ty + 1) & 0xFFFF))) {
+                        borderPath.moveTo(px, py + cs);
+                        borderPath.lineTo(px + cs, py + cs);
+                    }
+                    // Borde izquierdo: si la celda de la izquierda no es baldosa
+                    if (!tileSet.contains((long) (tx - 1) << 16 | (ty & 0xFFFF))) {
+                        borderPath.moveTo(px, py);
+                        borderPath.lineTo(px, py + cs);
+                    }
+                    // Borde derecho: si la celda de la derecha no es baldosa
+                    if (!tileSet.contains((long) (tx + 1) << 16 | (ty & 0xFFFF))) {
+                        borderPath.moveTo(px + cs, py);
+                        borderPath.lineTo(px + cs, py + cs);
+                    }
+                }
+
                 java.awt.Stroke prevStroke = g2d.getStroke();
+                g2d.setColor(new Color(210, 30, 30));
                 g2d.setStroke(new BasicStroke(4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g2d.drawRect(bx, by, bw, bh);
+                g2d.draw(borderPath);
                 g2d.setStroke(prevStroke);
             }
         }

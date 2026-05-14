@@ -23,15 +23,24 @@ TILES 9 0 2 9
 COIN 5.25 0.25
 COIN 10.25 0.25
 
-# Obstáculos Estáticos (Velocidad = 0)
-OBSTACLE BASIC 7.125 3.125 D false 0.0
-OBSTACLE BASIC 9.125 0.125 R true 0.0
-OBSTACLE BASIC 10.125 2.125 L true 0.0
-OBSTACLE BASIC 9.125 4.125 R true 0.0
-OBSTACLE BASIC 10.125 6.125 L true 0.0
-OBSTACLE BASIC 9.125 8.125 R true 0.0
-OBSTACLE BASIC 12.125 9.125 D false 0.0
-OBSTACLE BASIC 13.125 10.125 U false 0.0
+# Obstáculos con Movimiento
+# Obs 1: WAYPOINT anti-horario - recorre el camino de la moneda superior (cols 3-8, filas 0-4)
+# Puntos en orden anti-horario (pantalla): derecha→abajo→izquierda→arriba
+# Arriba-derecha → Abajo-derecha → Abajo-izquierda → Arriba-izquierda → vuelve
+OBSTACLE WAYPOINT 7.5 0.5 7.5 3.5 3.5 3.5 3.5 0.5
+
+# Obs 2-5: Movimiento HORIZONTAL en la columna vertical (cols 9-10, filas 0-8) chocando con paredes
+OBSTACLE BASIC 9.125 0.125 R true 0.055
+OBSTACLE BASIC 10.125 2.125 L true 0.055
+OBSTACLE BASIC 9.125 4.125 R true 0.055
+OBSTACLE BASIC 10.125 6.125 L true 0.055
+
+# Obs 6: Movimiento horizontal en el corredor inferior (fila 8-9)
+OBSTACLE BASIC 9.125 8.125 R true 0.055
+
+# Obs 7-8: Movimiento VERTICAL en el corredor derecho de la meta
+OBSTACLE BASIC 12.125 9.125 D false 0.055
+OBSTACLE BASIC 13.125 10.125 U false 0.055
 
 # Perímetro y Paredes Generadas Proceduralmente
 WALL -1 -1 1 1

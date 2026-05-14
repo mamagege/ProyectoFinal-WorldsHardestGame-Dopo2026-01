@@ -191,6 +191,18 @@ public class TxtLevelLoader implements LevelLoader {
                 // OBSTACLE PATROL x y range
                 obs = new PatrolObstacle(x, y, Double.parseDouble(tokens[4]));
                 break;
+
+            case "WAYPOINT":
+                // OBSTACLE WAYPOINT x1 y1 x2 y2 x3 y3 ...
+                // Parsea pares de coordenadas como puntos de paso del recorrido.
+                int numPoints = (tokens.length - 2) / 2;
+                double[][] wps = new double[numPoints][2];
+                for (int i = 0; i < numPoints; i++) {
+                    wps[i][0] = Double.parseDouble(tokens[2 + i * 2]);
+                    wps[i][1] = Double.parseDouble(tokens[3 + i * 2]);
+                }
+                obs = new WaypointObstacle(wps);
+                break;
         }
 
         if (obs != null) {
