@@ -168,9 +168,11 @@ public class GameWHG {
         }
 
         // 2. Propagar el personaje elegido a todos los niveles reales (index 1+)
-        //    Los niveles reales se reconstruyen con un personaje de posicion cero;
-        //    restablecemos el nivel actual para que el Tablero use el nuevo personaje.
-        resetGame();  // Recarga frescos todos los niveles con personaje por defecto
+        //    Sustituimos la recarga costosa de disco por un reset en memoria ultra veloz.
+        //    Esto elimina instantáneamente el micro-congelamiento de los botones.
+        for (Level lvl : levels) {
+            lvl.softReset();
+        }
 
         // Patchear el personaje en cada nivel cargado (los que heredan de TxtLevelLoader)
         for (int i = 1; i < levels.size(); i++) {

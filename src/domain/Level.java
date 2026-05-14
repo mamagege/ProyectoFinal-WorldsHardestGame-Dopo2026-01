@@ -166,6 +166,15 @@ public class Level {
     public void setModalityZones(List<ModalityZone> modalityZones) { tablero.setModalityZones(modalityZones); }
 
     // Métodos de estado del juego
+    public void softReset() {
+        this.completed = false;
+        if (tablero != null && tablero.getCoins() != null) {
+            for (Coin coin : tablero.getCoins()) {
+                coin.reset();
+            }
+        }
+    }
+
     public boolean isCompleted() { return completed; }
     public boolean isSelectionLevel() { return isSelectionLevel; }
     public void setSelectionLevel(boolean selectionLevel) { this.isSelectionLevel = selectionLevel; }

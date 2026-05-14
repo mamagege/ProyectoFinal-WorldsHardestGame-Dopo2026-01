@@ -99,6 +99,7 @@ public class TxtLevelLoader implements LevelLoader {
                         case "TILES":
                             // Rellena un área rectangular con baldosas 1x1 siguiendo el patrón de damero
                             fillCheckeredTiles(
+                                levelNumber,
                                 (int)Double.parseDouble(tokens[1]), 
                                 (int)Double.parseDouble(tokens[2]),
                                 (int)Double.parseDouble(tokens[3]), 
@@ -148,11 +149,20 @@ public class TxtLevelLoader implements LevelLoader {
         return constructedLevel;
     }
 
-    private void fillCheckeredTiles(int startX, int startY, int width, int height, List<Tile> tilesList) {
+    private void fillCheckeredTiles(int levelNumber, int startX, int startY, int width, int height, List<Tile> tilesList) {
+        String colorEven = "#D3D3D3";
+        String colorOdd  = "#F08080";
+
+        // Paleta premium personalizada para combinar con fondos oscuros de Niveles 1 y 2
+        if (levelNumber == 1 || levelNumber == 2) {
+            colorEven = "#1B1421"; // Negro/Berenjena muy oscuro
+            colorOdd  = "#3A2B4F"; // Morado místico profundo
+        }
+
         for (int x = startX; x < startX + width; x++) {
             for (int y = startY; y < startY + height; y++) {
                 // Lógica de damero centralizada
-                String color = ((x + y) % 2 == 0) ? "#D3D3D3" : "#F08080";
+                String color = ((x + y) % 2 == 0) ? colorEven : colorOdd;
                 tilesList.add(new Tile(x, y, 1.0, 1.0, color));
             }
         }

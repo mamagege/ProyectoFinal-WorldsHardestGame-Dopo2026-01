@@ -206,13 +206,26 @@ public class PanelJuego extends JPanel {
             System.err.println("Advertencia: No se pudo cargar fondo_limbo.png");
         }
         try {
-            level1BackgroundImage = ImageIO.read(new File("src/resources/images/nivel1_fondo.jpg"));
+            level1BackgroundImage = ImageIO.read(new File("src/resources/images/nivel1_fondo.png"));
         } catch (IOException e) {
-            System.err.println("Advertencia: No se pudo cargar nivel1_fondo.jpg");
+            System.err.println("Advertencia: No se pudo cargar nivel1_fondo.png");
+        }
+    }
+
+    public void resetKeyboard() {
+        if (controlador != null) {
+            controlador.resetKeyStates();
         }
     }
 
     public void actualizarInterfaz() {
+        // GARANTÍA ABSOLUTA DE FOCO DE TECLADO:
+        // Si este panel está visible pero ha perdido el foco por transiciones de Swing,
+        // lo reclamamos en caliente al vuelo. Soluciona el congelamiento o lag de 5 segundos.
+        if (isShowing() && !hasFocus()) {
+            requestFocusInWindow();
+        }
+
         // Forzar refresco de velocidad en cada frame. Esto soluciona el lag al cambiar de nivel
         // copiando instantáneamente el estado de las teclas pulsadas al nuevo objeto personaje.
         if (controlador != null) {

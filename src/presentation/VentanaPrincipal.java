@@ -64,6 +64,7 @@ public class VentanaPrincipal extends JFrame {
     public void mostrarPanel(String nombrePanel) {
         cardLayout.show(getContentPane(), nombrePanel);
         if (nombrePanel.equals("JUEGO")) {
+            panelJuego.resetKeyboard(); // Erradicar fantasmgeo de teclas de pantallas previas
             SwingUtilities.invokeLater(() -> panelJuego.requestFocusInWindow());
         }
     }

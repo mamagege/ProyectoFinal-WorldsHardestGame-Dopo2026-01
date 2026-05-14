@@ -61,4 +61,11 @@ public class ControladorJuego extends KeyAdapter {
         
         pJugador.setVelocity(vx, vy);
     }
+
+    public void resetKeyStates() {
+        upPressed = false;
+        downPressed = false;
+        leftPressed = false;
+        rightPressed = false;
+    }
 }
