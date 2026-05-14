@@ -16,6 +16,7 @@ public class VentanaPrincipal extends JFrame {
     private PanelJuego panelJuego;
     private PanelSplashScreen panelSplashIntro;
     private PanelSplashScreen panelSplashLimbo;
+    private PanelSeleccionPersonaje panelSeleccion;
     private GameWHG gameOrchestrator;
 
     public VentanaPrincipal(GameWHG gameOrchestrator) {
@@ -39,18 +40,21 @@ public class VentanaPrincipal extends JFrame {
         panelJuego = new PanelJuego(this, gameOrchestrator);
         panelSplashIntro = new PanelSplashScreen(this, "pantalla_carga_inicio.png", "MENU");
         panelSplashLimbo = new PanelSplashScreen(this, "1.Limbro.png", "JUEGO");
+        panelSeleccion = new PanelSeleccionPersonaje(this, gameOrchestrator);
 
         // Bloquear las dimensiones preferidas internas al tamaño de la pantalla
-        // Esto evita que el Layout Manager "ajuste" el tamaño en el primer frame
+        // Esto evita que el Layout Manager ajuste el tamaño en el primer frame
         panelMenu.setPreferredSize(screenSize);
         panelJuego.setPreferredSize(screenSize);
         panelSplashIntro.setPreferredSize(screenSize);
         panelSplashLimbo.setPreferredSize(screenSize);
+        panelSeleccion.setPreferredSize(screenSize);
 
         add(panelSplashIntro, "SPLASH_INTRO");
         add(panelSplashLimbo, "SPLASH_LIMBO");
         add(panelMenu, "MENU");
         add(panelJuego, "JUEGO");
+        add(panelSeleccion, "SELECCION");
 
         mostrarPanel("SPLASH_INTRO");
         panelSplashIntro.startSequence(); // Iniciar animación de arranque
@@ -69,6 +73,10 @@ public class VentanaPrincipal extends JFrame {
 
     public PanelSplashScreen getPanelSplashLimbo() {
         return panelSplashLimbo;
+    }
+
+    public PanelSeleccionPersonaje getPanelSeleccion() {
+        return panelSeleccion;
     }
 
     public GameWHG getGameOrchestrator() {

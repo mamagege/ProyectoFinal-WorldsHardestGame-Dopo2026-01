@@ -144,6 +144,70 @@ public class GameWHG {
         prepareBoard();
     }
 
+    /**
+     * Metodo invocado por PanelSeleccionPersonaje cuando el jugador elige un personaje.
+     * Sustituye el personaje en todos los niveles cargados, resetea el estado y navega
+     * al juego a traves de la cinematica de precarga (SPLASH_LIMBO).
+     *
+     * @param tipoPersonaje  0=Rojo(Rafael), 1=Azul(Leonardo), 2=Verde(MiguelAngelo)
+     */
+    public void iniciarJuegoConPersonaje(int tipoPersonaje) {
+        // 1. Crear el personaje elegido en posicion inicial de referencia (spawn)
+        Character personajeElegido;
+        switch (tipoPersonaje) {
+            case PanelSeleccionPersonaje.PERSONAJE_AZUL:
+                personajeElegido = new domain.BlueCharacter(1.0, 1.0);
+                break;
+            case PanelSeleccionPersonaje.PERSONAJE_VERDE:
+                personajeElegido = new domain.GreenCharacter(1.0, 1.0);
+                break;
+            case PanelSeleccionPersonaje.PERSONAJE_ROJO:
+            default:
+                personajeElegido = new domain.RedCharacter(1.0, 1.0);
+                break;
+        }
+
+        // 2. Propagar el personaje elegido a todos los niveles reales (index 1+)
+        //    Los niveles reales se reconstruyen con un personaje de posicion cero;
+        //    restablecemos el nivel actual para que el Tablero use el nuevo personaje.
+        resetGame();  // Recarga frescos todos los niveles con personaje por defecto
+
+        // Patchear el personaje en cada nivel cargado (los que heredan de TxtLevelLoader)
+        for (int i = 1; i < levels.size(); i++) {
+            Level lvl = levels.get(i);
+            // Clonar posicion spawn del checkpoint 0 (si existe)
+            double spawnX = 1.0, spawnY = 1.0;
+            if (!lvl.getCheckpoints().isEmpty()) {
+                spawnX = lvl.getCheckpoints().get(0).getPositionX();
+                spawnY = lvl.getCheckpoints().get(0).getPositionY();
+            }
+            // Crear instancia fresca del personaje elegido en el spawn correcto
+            Character c;
+            switch (tipoPersonaje) {
+                case PanelSeleccionPersonaje.PERSONAJE_AZUL:
+                    c = new domain.BlueCharacter(spawnX, spawnY);
+                    break;
+                case PanelSeleccionPersonaje.PERSONAJE_VERDE:
+                    c = new domain.GreenCharacter(spawnX, spawnY);
+                    break;
+                default:
+                    c = new domain.RedCharacter(spawnX, spawnY);
+                    break;
+            }
+            lvl.getTablero().setCharacter(c);
+        }
+
+        // 3. Ir al primer nivel de juego real
+        currentLevelIndex = 1;
+        if (currentLevelIndex < levels.size()) {
+            currentLevel = levels.get(currentLevelIndex);
+        }
+
+        // 4. Lanzar cinematica de precarga del nivel y mostrar el juego
+        mainWindow.getPanelSplashLimbo().startSequence();
+        mainWindow.mostrarPanel("SPLASH_LIMBO");
+    }
+
     private void prepareActions() {
         // Timer configurado a ~60 FPS (16 ms)
         gameLoopTimer = new Timer(16, e -> tick());

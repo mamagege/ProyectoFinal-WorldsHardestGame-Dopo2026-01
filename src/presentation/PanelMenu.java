@@ -99,13 +99,10 @@ public class PanelMenu extends JPanel {
         JButton btnOpciones = crearBoton("OPCIONES");
         JButton btnSalir = crearBoton("SALIR");
 
-        // Configurar acciones directas (Transición inmediata a la carga de nivel)
+        // Configurar acciones directas (Transicion al panel de seleccion de personaje)
         btnJugar.addActionListener(e -> {
-            // Preparar el motor del juego en segundo plano
-            ventana.getGameOrchestrator().resetGame();
-            // Lanzar cinemática de precarga del Nivel
-            ventana.getPanelSplashLimbo().startSequence();
-            ventana.mostrarPanel("SPLASH_LIMBO");
+            // Ir a la pantalla de seleccion de personaje
+            ventana.mostrarPanel("SELECCION");
         });
 
         btnSalir.addActionListener(e -> System.exit(0));

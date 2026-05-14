@@ -79,6 +79,7 @@ public class Tablero {
     public double getMinY() { return minY; }
     public double getMaxY() { return maxY; }
     public Character getCharacter() { return character; }
+    public void setCharacter(Character character) { this.character = character; }
     public List<Obstacle> getObstacles() { return obstacles; }
     public List<Coin> getCoins() { return coins; }
     public List<Wall> getWalls() { return walls; }
