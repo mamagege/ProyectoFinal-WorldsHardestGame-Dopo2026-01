@@ -1,6 +1,7 @@
 package presentation;
 
 import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 
@@ -63,7 +64,7 @@ public class VentanaPrincipal extends JFrame {
     public void mostrarPanel(String nombrePanel) {
         cardLayout.show(getContentPane(), nombrePanel);
         if (nombrePanel.equals("JUEGO")) {
-            panelJuego.requestFocusInWindow();
+            SwingUtilities.invokeLater(() -> panelJuego.requestFocusInWindow());
         }
     }
 

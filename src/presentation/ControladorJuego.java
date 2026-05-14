@@ -38,13 +38,13 @@ public class ControladorJuego extends KeyAdapter {
     }
     
     private void setKeyState(int keyCode, boolean pressed) {
-        if (keyCode == KeyEvent.VK_UP) upPressed = pressed;
-        if (keyCode == KeyEvent.VK_DOWN) downPressed = pressed;
-        if (keyCode == KeyEvent.VK_LEFT) leftPressed = pressed;
-        if (keyCode == KeyEvent.VK_RIGHT) rightPressed = pressed;
+        if (keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_W) upPressed = pressed;
+        if (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_S) downPressed = pressed;
+        if (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_A) leftPressed = pressed;
+        if (keyCode == KeyEvent.VK_RIGHT || keyCode == KeyEvent.VK_D) rightPressed = pressed;
     }
     
-    private void updateVelocity() {
+    public void updateVelocity() {
         Level level = gameOrchestrator.getCurrentLevel();
         if (level == null || level.isCompleted()) return;
         

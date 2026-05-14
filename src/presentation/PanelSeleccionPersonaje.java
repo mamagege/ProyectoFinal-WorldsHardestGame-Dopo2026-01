@@ -265,8 +265,9 @@ public class PanelSeleccionPersonaje extends JPanel {
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
+        btn.setFocusable(false); // Prevención de robo de foco del teclado
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.addActionListener(e -> ventana.mostrarPanel("MENU"));
+        btn.addActionListener(e -> ventana.mostrarPanel("JUEGO")); // Regresar al Hub de Portales, no al Título
         return btn;
     }
 
@@ -306,6 +307,7 @@ public class PanelSeleccionPersonaje extends JPanel {
             this.owner            = owner;
 
             setOpaque(false);
+            setFocusable(false); // Garantía de no intercepción del foco
             setCursor(new Cursor(Cursor.HAND_CURSOR));
 
             addMouseListener(new MouseAdapter() {

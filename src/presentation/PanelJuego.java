@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.awt.FontFormatException;
 import java.awt.BasicStroke;
+import java.awt.RenderingHints;
 import java.awt.geom.Area;
 import java.awt.Rectangle;
 import javax.imageio.ImageIO;
@@ -44,6 +45,7 @@ public class PanelJuego extends JPanel {
     private Image modalityPlayerImage;
     private Font titleFont;
     private Font modalityDescFont;
+    private ControladorJuego controlador; // Referencia directa para sincronización continua de estado del teclado
 
     // Sistema de partículas estéticas para la capa de presentación
     private java.util.List<VisualParticle> selectionParticles = new java.util.ArrayList<>();
@@ -55,26 +57,107 @@ public class PanelJuego extends JPanel {
         setLayout(new BorderLayout());
         setBackground(Color.decode("#E6E6FA"));
 
-        barraSuperior = new JPanel(new BorderLayout());
-        barraSuperior.setBackground(Color.LIGHT_GRAY);
+        barraSuperior = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(getBackground());
+                g.fillRect(0, 0, getWidth(), getHeight());
+                super.paintComponent(g);
+            }
+        };
+        barraSuperior.setBackground(new Color(0, 0, 0, 100));
+        barraSuperior.setOpaque(false);
+        barraSuperior.setFocusable(false);
 
-        JButton btnMenu = new JButton("MENU");
+        JButton btnMenu = new JButton("MENU") {
+            private boolean isHovered = false;
+            
+            {
+                setFocusable(false);
+                setOpaque(false);
+                setContentAreaFilled(false);
+                setBorderPainted(false);
+                setForeground(Color.WHITE);
+                setFont(new Font("Arial", Font.BOLD, 14));
+                setPreferredSize(new java.awt.Dimension(90, 35));
+                
+                addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override
+                    public void mouseEntered(java.awt.event.MouseEvent e) {
+                        isHovered = true;
+                        repaint();
+                    }
+                    @Override
+                    public void mouseExited(java.awt.event.MouseEvent e) {
+                        isHovered = false;
+                        repaint();
+                    }
+                });
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Fondo del botón: Oscuro semitransparente
+                if (isHovered) {
+                    g2.setColor(new Color(40, 30, 70, 210)); // Ligeramente más claro al hover
+                } else {
+                    g2.setColor(new Color(20, 15, 40, 180));
+                }
+                g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 10, 10);
+                
+                // Borde suave con glow (morado/lavanda)
+                if (isHovered) {
+                    g2.setColor(new Color(200, 180, 255, 255)); // Brillo intenso al hover
+                    g2.setStroke(new BasicStroke(2.0f));
+                } else {
+                    g2.setColor(new Color(150, 100, 220, 150));
+                    g2.setStroke(new BasicStroke(1.5f));
+                }
+                g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 10, 10);
+                
+                super.paintComponent(g2);
+                g2.dispose();
+            }
+        };
         btnMenu.addActionListener(e -> ventana.mostrarPanel("MENU"));
 
         labelNivel = new JLabel("Nivel: 1/30", JLabel.CENTER);
         labelNivel.setFont(new Font("Arial", Font.BOLD, 16));
+        labelNivel.setForeground(Color.WHITE); // Asegura visibilidad sobre fondo oscuro
+        labelNivel.setFocusable(false);
 
         labelMuertes = new JLabel("Deaths: 0  ");
         labelMuertes.setFont(new Font("Arial", Font.BOLD, 16));
+        labelMuertes.setForeground(Color.WHITE);
+        labelMuertes.setFocusable(false);
 
-        barraSuperior.add(btnMenu, BorderLayout.WEST);
-        barraSuperior.add(labelNivel, BorderLayout.CENTER);
-        barraSuperior.add(labelMuertes, BorderLayout.EAST);
+        // Wrappers seguros para evitar robos de foco del mouse
+        JPanel btnWrap = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 15, 10));
+        btnWrap.setOpaque(false);
+        btnWrap.setFocusable(false);
+        btnWrap.add(btnMenu);
+
+        JPanel centerWrap = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 15, 10));
+        centerWrap.setOpaque(false);
+        centerWrap.setFocusable(false);
+        centerWrap.add(labelNivel);
+
+        JPanel lblWrap = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 15, 10));
+        lblWrap.setOpaque(false);
+        lblWrap.setFocusable(false);
+        lblWrap.add(labelMuertes);
+
+        barraSuperior.add(btnWrap, BorderLayout.WEST);
+        barraSuperior.add(centerWrap, BorderLayout.CENTER);
+        barraSuperior.add(lblWrap, BorderLayout.EAST);
 
         add(barraSuperior, BorderLayout.NORTH);
 
-        ControladorJuego controlador = new ControladorJuego(this, gameOrchestrator);
-        addKeyListener(controlador);
+        this.controlador = new ControladorJuego(this, gameOrchestrator);
+        addKeyListener(this.controlador);
         setFocusable(true);
 
         cargarFuentes();
@@ -130,18 +213,32 @@ public class PanelJuego extends JPanel {
     }
 
     public void actualizarInterfaz() {
+        // Forzar refresco de velocidad en cada frame. Esto soluciona el lag al cambiar de nivel
+        // copiando instantáneamente el estado de las teclas pulsadas al nuevo objeto personaje.
+        if (controlador != null) {
+            controlador.updateVelocity();
+        }
+
         Level level = gameOrchestrator.getCurrentLevel();
         if (level != null) {
-            // Ocultar barra superior si estamos en el nivel de selección
-            boolean visible = !level.isSelectionLevel();
-            if (barraSuperior.isVisible() != visible) {
-                barraSuperior.setVisible(visible);
-                revalidate(); // Forzar re-layout al cambiar visibilidad
+            boolean isSel = level.isSelectionLevel();
+            
+            // La barra superior ahora siempre está visible para permitir el acceso al botón MENU
+            if (!barraSuperior.isVisible()) {
+                barraSuperior.setVisible(true);
+                revalidate(); // Forzar re-layout
             }
 
-            if (visible) {
+            // Ocultar o mostrar las estadísticas dinámicamente para no ensuciar el Hub de Selección
+            if (labelMuertes.isVisible() == isSel) {
+                labelMuertes.setVisible(!isSel);
+            }
+            if (labelNivel.isVisible() == isSel) {
+                labelNivel.setVisible(!isSel);
+            }
+
+            if (!isSel) {
                 labelMuertes.setText("Deaths: " + level.getCharacter().getDeaths() + "  ");
-                // El índice 0 es el nivel de selección (decorativo); el índice 1 = Nivel 1 real
                 labelNivel.setText("Nivel: " + gameOrchestrator.getCurrentLevelIndex() + "/30");
             }
         }
@@ -519,6 +616,11 @@ public class PanelJuego extends JPanel {
             g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
                     antialiasHint != null ? antialiasHint : java.awt.RenderingHints.VALUE_ANTIALIAS_DEFAULT);
         }
+        
+        // 6. Renderizar Tutorial flotante en el nivel 1
+        if (!level.isSelectionLevel() && gameOrchestrator.getCurrentLevelIndex() == 1) {
+            dibujarTutorial(g2d, vWidth, vHeight, offsetX, offsetY, mapWidth, mapHeight);
+        }
 
         // Restaurar el contexto a su transformación nativa al terminar el frame
         if (oldTransform != null) {
@@ -563,6 +665,136 @@ public class PanelJuego extends JPanel {
                 g2d.drawString(pvsmText, centerX - pvsmTextW / 2, centerY + size / 6);
                 break;
         }
+    }
+
+    private void dibujarTutorial(Graphics2D g2d, int vWidth, int vHeight, int offsetX, int offsetY, int mapWidth, int mapHeight) {
+        // Definir el área del letrero del tutorial
+        int tutW = 340;
+        int tutH = 360;
+        int tutX, tutY;
+
+        // Posicionarlo dinámicamente a la izquierda si hay espacio, sino a la derecha, o fallback superior
+        if (offsetX > 360) {
+            tutX = (offsetX - tutW) / 2;
+            tutY = offsetY + (mapHeight - tutH) / 2;
+        } else if (vWidth - (offsetX + mapWidth) > 360) {
+            tutX = offsetX + mapWidth + (vWidth - (offsetX + mapWidth) - tutW) / 2;
+            tutY = offsetY + (mapHeight - tutH) / 2;
+        } else {
+            // Si no hay suficiente espacio lateral, colocarlo compacto
+            tutX = 20;
+            tutY = 85;
+            tutW = 320;
+            tutH = 340;
+        }
+
+        Graphics2D g = (Graphics2D) g2d.create();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        // 1. Fondo Premium translúcido tipo cristal oscuro
+        g.setColor(new Color(20, 15, 35, 220));
+        g.fillRoundRect(tutX, tutY, tutW, tutH, 20, 20);
+        
+        // Glow cian neón elegante
+        g.setColor(new Color(0, 220, 255, 160));
+        g.setStroke(new BasicStroke(2.5f));
+        g.drawRoundRect(tutX + 2, tutY + 2, tutW - 4, tutH - 4, 18, 18);
+        
+        // 2. Título
+        g.setFont(new Font("SansSerif", Font.BOLD, 24));
+        FontMetrics fm = g.getFontMetrics();
+        String title = "★ TUTORIAL ★";
+        g.setColor(new Color(0, 255, 200));
+        g.drawString(title, tutX + (tutW - fm.stringWidth(title)) / 2, tutY + 45);
+        
+        // Línea divisoria sutil
+        g.setStroke(new BasicStroke(1f));
+        g.setColor(new Color(255, 255, 255, 60));
+        g.drawLine(tutX + 30, tutY + 62, tutX + tutW - 30, tutY + 62);
+        
+        // 3. Cuerpo de Instrucciones
+        int textX = tutX + 25;
+        int textY = tutY + 100;
+        
+        g.setFont(new Font("Arial", Font.BOLD, 16));
+        g.setColor(new Color(220, 220, 255));
+        
+        // Movimiento
+        g.drawString("MOVIMIENTO:", textX, textY);
+        
+        // Teclado Visual WASD + Flechas
+        dibujarTecladoGrafico(g, textX + 125, textY - 18);
+        
+        textY += 75;
+        
+        g.setFont(new Font("Arial", Font.PLAIN, 15));
+        
+        // Regla 1: Moneda
+        g.setColor(Color.YELLOW);
+        g.fillOval(textX, textY, 14, 14);
+        g.setColor(Color.WHITE);
+        g.drawString("Recoge la Moneda", textX + 22, textY + 13);
+        textY += 35;
+        
+        // Regla 2: Meta
+        g.setColor(new Color(142, 210, 127));
+        g.fillRect(textX, textY, 14, 14);
+        g.setColor(Color.WHITE);
+        g.drawString("Llega sano a la Meta (Zona Verde)", textX + 22, textY + 13);
+        textY += 35;
+        
+        // Regla 3: Obstáculos
+        g.setColor(Color.BLUE);
+        g.fillOval(textX, textY, 14, 14);
+        g.setColor(new Color(255, 110, 110)); // Rojo coral brillante
+        g.drawString("¡NO toques los círculos azules!", textX + 22, textY + 13);
+        
+        // Footer
+        textY += 55;
+        g.setFont(new Font("Arial", Font.ITALIC, 13));
+        g.setColor(new Color(180, 180, 180));
+        String info = "¡Demuestra tu destreza y sobrevive!";
+        g.drawString(info, tutX + (tutW - g.getFontMetrics().stringWidth(info)) / 2, textY);
+        
+        g.dispose();
+    }
+
+    private void dibujarTecladoGrafico(Graphics2D g, int x, int y) {
+        int keySize = 17;
+        
+        // 1. WASD
+        g.setColor(new Color(255, 255, 255, 40));
+        g.fillRoundRect(x + keySize + 2, y, keySize, keySize, 4, 4); // W
+        g.fillRoundRect(x, y + keySize + 2, keySize, keySize, 4, 4); // A
+        g.fillRoundRect(x + keySize + 2, y + keySize + 2, keySize, keySize, 4, 4); // S
+        g.fillRoundRect(x + (keySize + 2) * 2, y + keySize + 2, keySize, keySize, 4, 4); // D
+        
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Monospaced", Font.BOLD, 10));
+        g.drawString("W", x + keySize + 6, y + 12);
+        g.drawString("A", x + 4, y + keySize + 14);
+        g.drawString("S", x + keySize + 6, y + keySize + 14);
+        g.drawString("D", x + (keySize + 2) * 2 + 4, y + keySize + 14);
+
+        // Divisor "o"
+        g.setFont(new Font("Arial", Font.BOLD, 12));
+        g.setColor(new Color(200, 200, 255));
+        g.drawString("o", x + 62, y + keySize + 4);
+
+        // 2. Flechas
+        int fx = x + 80;
+        g.setColor(new Color(255, 255, 255, 40));
+        g.fillRoundRect(fx + keySize + 2, y, keySize, keySize, 4, 4); // Up
+        g.fillRoundRect(fx, y + keySize + 2, keySize, keySize, 4, 4); // Left
+        g.fillRoundRect(fx + keySize + 2, y + keySize + 2, keySize, keySize, 4, 4); // Down
+        g.fillRoundRect(fx + (keySize + 2) * 2, y + keySize + 2, keySize, keySize, 4, 4); // Right
+        
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Monospaced", Font.BOLD, 10));
+        g.drawString("▲", fx + keySize + 4, y + 12);
+        g.drawString("◀", fx + 3, y + keySize + 14);
+        g.drawString("▼", fx + keySize + 4, y + keySize + 14);
+        g.drawString("▶", fx + (keySize + 2) * 2 + 2, y + keySize + 14);
     }
 
     private static class VisualParticle {
