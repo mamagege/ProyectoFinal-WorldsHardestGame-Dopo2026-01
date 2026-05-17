@@ -41,17 +41,26 @@ public class PanelSeleccionPersonaje extends JPanel {
     private Font          cardTitleFont;
     private Font          cardStatsFont;
 
-    // ------------------------------------------------------------------ //
-    //  Tarjetas de personaje
-    // ------------------------------------------------------------------ //
     private TarjetaPersonaje tarjetaRojo;
     private TarjetaPersonaje tarjetaAzul;
     private TarjetaPersonaje tarjetaVerde;
+    private BufferedImage    imagePruebaPvp;
+    private JButton          btnVolver;
 
     // ------------------------------------------------------------------ //
     //  Animacion hover de las tarjetas
     // ------------------------------------------------------------------ //
     private Timer animTimer;
+
+    // ------------------------------------------------------------------ //
+    //  Estado PvsP
+    // ------------------------------------------------------------------ //
+    private int p1Index = 0;
+    private int p2Index = 2;
+    private boolean p1Ready = false;
+    private boolean p2Ready = false;
+    private int pvpStep = 1; // 1 = J1, 2 = J2
+    private int j1ChosenCharacter = -1;
 
     // ====================================================================
     //  CONSTRUCTOR
@@ -64,9 +73,33 @@ public class PanelSeleccionPersonaje extends JPanel {
         cargarRecursos();
         construirUI();
 
+        setFocusable(true);
+        addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                manejarTeclas(e.getKeyCode());
+            }
+        });
+        
         // Timer de repintado a 60 FPS para animaciones de hover
         animTimer = new Timer(16, e -> repaint());
         animTimer.start();
+    }
+
+    public void resetSelection() {
+        System.out.println("[DEBUG] PanelSeleccionPersonaje resetSelection. Modality = " + gameOrchestrator.getCurrentModality());
+        this.p1Index = 0;
+        this.p2Index = 2;
+        this.p1Ready = false;
+        this.p2Ready = false;
+        this.pvpStep = 1;
+        this.j1ChosenCharacter = -1;
+        
+        if (tarjetaRojo != null) tarjetaRojo.setVisible(true);
+        if (tarjetaAzul != null) tarjetaAzul.setVisible(true);
+        if (tarjetaVerde != null) tarjetaVerde.setVisible(true);
+        if (btnVolver != null) btnVolver.setVisible(true);
+        repaint();
     }
 
     // ====================================================================
@@ -78,6 +111,11 @@ public class PanelSeleccionPersonaje extends JPanel {
                 backgroundImage = ImageIO.read(new File("src/resources/images/fondo_SelectPlayer.png"));
                 if (backgroundImage == null) {
                     throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+                }
+
+                File pvpPruebaFile = new File("src/resources/images/prueba_pvp.png");
+                if (pvpPruebaFile.exists()) {
+                    imagePruebaPvp = ImageIO.read(pvpPruebaFile);
                 }
 
                 Font base = Font.createFont(Font.TRUETYPE_FONT, new File("src/resources/fonts/HellraiserBloody.ttf"));
@@ -161,7 +199,7 @@ public class PanelSeleccionPersonaje extends JPanel {
         add(tarjetaVerde);
 
         // -- Boton VOLVER
-        JButton btnVolver = crearBotonVolver();
+        btnVolver = crearBotonVolver();
         add(btnVolver);
     }
 
@@ -188,9 +226,10 @@ public class PanelSeleccionPersonaje extends JPanel {
         tarjetaVerde.setBounds(startX + (cardW + gapX) * 2,   cardY, cardW, cardH);
 
         // Boton Volver
-        Component volver = getComponent(3);
-        int bW = 180, bH = 48;
-        volver.setBounds((w - bW) / 2, h - bH - 20, bW, bH);
+        if (btnVolver != null) {
+            int bW = 180, bH = 48;
+            btnVolver.setBounds((w - bW) / 2, h - bH - 20, bW, bH);
+        }
     }
 
     // ====================================================================
@@ -199,6 +238,7 @@ public class PanelSeleccionPersonaje extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        System.out.println("[DEBUG] PanelSeleccionPersonaje paintComponent. Modality = " + gameOrchestrator.getCurrentModality());
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -218,6 +258,17 @@ public class PanelSeleccionPersonaje extends JPanel {
 
     private void dibujarTitulo(Graphics2D g2d) {
         String titulo = "SELECT PLAYER";
+        Color textoColor = new Color(220, 220, 255);
+        boolean isPvP = gameOrchestrator.getCurrentModality() == domain.Modality.PVP;
+        if (isPvP) {
+            if (pvpStep == 1) {
+                titulo = "SELECCION DE PERSONAJE J1";
+                textoColor = new Color(255, 80, 80); // Rojo brillante
+            } else {
+                titulo = "SELECCION DE PERSONAJE J2";
+                textoColor = new Color(80, 220, 255); // Cyan brillante
+            }
+        }
         g2d.setFont(titleFont);
         FontMetrics fm = g2d.getFontMetrics();
         int tx = (getWidth() - fm.stringWidth(titulo)) / 2;
@@ -231,13 +282,116 @@ public class PanelSeleccionPersonaje extends JPanel {
             }
         }
         // Texto principal
-        g2d.setColor(new Color(220, 220, 255));
+        g2d.setColor(textoColor);
         g2d.drawString(titulo, tx, ty);
+        
+        // Dibujar Subtítulo de Modalidad
+        if (isPvP) {
+            g2d.setFont(cardStatsFont.deriveFont(Font.BOLD, 22f));
+            String sub = "MODALIDAD: JUGADOR VS JUGADOR (PvP)";
+            FontMetrics fmSub = g2d.getFontMetrics();
+            int sx = (getWidth() - fmSub.stringWidth(sub)) / 2;
+            int sy = (int) (getHeight() * 0.07);
+            
+            // Sombra
+            g2d.setColor(Color.BLACK);
+            g2d.drawString(sub, sx + 2, sy + 2);
+            
+            g2d.setColor(new Color(46, 204, 113));
+            g2d.drawString(sub, sx, sy);
+        }
+
+        // Dibujar Indicadores de Selección PvsP
+        dibujarIndicadoresJugadores(g2d);
+    }
+    
+    private void manejarTeclas(int keyCode) {
+        boolean isPvP = gameOrchestrator.getCurrentModality() == domain.Modality.PVP;
+        
+        if (isPvP) {
+            if (pvpStep == 1) {
+                if (keyCode == java.awt.event.KeyEvent.VK_A || keyCode == java.awt.event.KeyEvent.VK_LEFT) {
+                    p1Index = Math.max(0, p1Index - 1);
+                }
+                if (keyCode == java.awt.event.KeyEvent.VK_D || keyCode == java.awt.event.KeyEvent.VK_RIGHT) {
+                    p1Index = Math.min(2, p1Index + 1);
+                }
+                if (keyCode == java.awt.event.KeyEvent.VK_E || keyCode == java.awt.event.KeyEvent.VK_ENTER || keyCode == java.awt.event.KeyEvent.VK_SPACE) {
+                    j1ChosenCharacter = p1Index;
+                    pvpStep = 2;
+                }
+            } else if (pvpStep == 2) {
+                if (keyCode == java.awt.event.KeyEvent.VK_A || keyCode == java.awt.event.KeyEvent.VK_LEFT) {
+                    p2Index = Math.max(0, p2Index - 1);
+                }
+                if (keyCode == java.awt.event.KeyEvent.VK_D || keyCode == java.awt.event.KeyEvent.VK_RIGHT) {
+                    p2Index = Math.min(2, p2Index + 1);
+                }
+                if (keyCode == java.awt.event.KeyEvent.VK_E || keyCode == java.awt.event.KeyEvent.VK_ENTER || keyCode == java.awt.event.KeyEvent.VK_SPACE) {
+                    gameOrchestrator.iniciarJuegoConPersonaje(j1ChosenCharacter, p2Index);
+                }
+            }
+        } else {
+            if (keyCode == java.awt.event.KeyEvent.VK_A || keyCode == java.awt.event.KeyEvent.VK_LEFT) {
+                p1Index = Math.max(0, p1Index - 1);
+            }
+            if (keyCode == java.awt.event.KeyEvent.VK_D || keyCode == java.awt.event.KeyEvent.VK_RIGHT) {
+                p1Index = Math.min(2, p1Index + 1);
+            }
+            if (keyCode == java.awt.event.KeyEvent.VK_E || keyCode == java.awt.event.KeyEvent.VK_ENTER || keyCode == java.awt.event.KeyEvent.VK_SPACE) {
+                gameOrchestrator.iniciarJuegoConPersonaje(p1Index, 0);
+            }
+        }
+        
+        repaint();
     }
 
-    // ====================================================================
-    //  BOTON VOLVER
-    // ====================================================================
+    private void dibujarIndicadoresJugadores(Graphics2D g2d) {
+        boolean isPvP = gameOrchestrator.getCurrentModality() == domain.Modality.PVP;
+        g2d.setFont(cardStatsFont.deriveFont(Font.BOLD, 24f));
+        
+        if (isPvP) {
+            if (pvpStep == 1) {
+                TarjetaPersonaje t1 = obtenerTarjeta(p1Index);
+                if (t1 != null) {
+                    int cx = t1.getX() + t1.getWidth() / 2;
+                    int cy = t1.getY() - 20;
+                    String text = "JUGADOR 1 (A/D)";
+                    g2d.setColor(Color.RED);
+                    FontMetrics fm = g2d.getFontMetrics();
+                    g2d.drawString(text, cx - fm.stringWidth(text)/2, cy);
+                }
+            } else {
+                TarjetaPersonaje t2 = obtenerTarjeta(p2Index);
+                if (t2 != null) {
+                    int cx = t2.getX() + t2.getWidth() / 2;
+                    int cy = t2.getY() - 20;
+                    String text = "JUGADOR 2 (< / >)";
+                    g2d.setColor(Color.CYAN);
+                    FontMetrics fm = g2d.getFontMetrics();
+                    g2d.drawString(text, cx - fm.stringWidth(text)/2, cy);
+                }
+            }
+        } else {
+            TarjetaPersonaje t1 = obtenerTarjeta(p1Index);
+            if (t1 != null) {
+                int cx = t1.getX() + t1.getWidth() / 2;
+                int cy = t1.getY() - 20;
+                String text = "JUGADOR 1 (A/D)";
+                g2d.setColor(Color.RED);
+                FontMetrics fm = g2d.getFontMetrics();
+                g2d.drawString(text, cx - fm.stringWidth(text)/2, cy);
+            }
+        }
+    }
+    
+    private TarjetaPersonaje obtenerTarjeta(int index) {
+        if (index == 0) return tarjetaRojo;
+        if (index == 1) return tarjetaAzul;
+        if (index == 2) return tarjetaVerde;
+        return null;
+    }
+
     private JButton crearBotonVolver() {
         JButton btn = new JButton("VOLVER") {
             @Override
@@ -269,11 +423,19 @@ public class PanelSeleccionPersonaje extends JPanel {
         return btn;
     }
 
-    // ====================================================================
-    //  CALLBACK: el jugador eligio un personaje
-    // ====================================================================
     void seleccionarPersonaje(int tipo) {
-        gameOrchestrator.iniciarJuegoConPersonaje(tipo);
+        boolean isPvP = gameOrchestrator.getCurrentModality() == domain.Modality.PVP;
+        if (isPvP) {
+            if (pvpStep == 1) {
+                j1ChosenCharacter = tipo;
+                pvpStep = 2;
+                repaint();
+            } else if (pvpStep == 2) {
+                gameOrchestrator.iniciarJuegoConPersonaje(j1ChosenCharacter, tipo);
+            }
+        } else {
+            gameOrchestrator.iniciarJuegoConPersonaje(tipo, 0);
+        }
     }
 
     // ====================================================================
@@ -377,11 +539,35 @@ public class PanelSeleccionPersonaje extends JPanel {
 
             // 3. Borde (normal -> hover con interpolacion lineal)
             Color borderColor = interpolarColor(colorBordeNormal, colorBordeHover, glowAlpha);
-            // El borde se vuelve rojo vivo si hay mucho miedo
-            if (fearRatio > 0.5f) {
+            
+            boolean isSelectedByActive = false;
+            Color activeColor = Color.RED;
+            boolean isPvP = gameOrchestrator.getCurrentModality() == domain.Modality.PVP;
+            if (isPvP) {
+                if (pvpStep == 1 && tipoPersonaje == p1Index) {
+                    isSelectedByActive = true;
+                    activeColor = Color.RED;
+                } else if (pvpStep == 2 && tipoPersonaje == p2Index) {
+                    isSelectedByActive = true;
+                    activeColor = Color.CYAN;
+                }
+            } else {
+                if (tipoPersonaje == p1Index) {
+                    isSelectedByActive = true;
+                    activeColor = Color.RED;
+                }
+            }
+
+            if (isSelectedByActive) {
+                borderColor = activeColor;
+            } else if (fearRatio > 0.5f) {
                 borderColor = interpolarColor(borderColor, Color.RED, (fearRatio - 0.5f) * 2f);
             }
+
             float borderWidth = 2f + 3f * glowAlpha;
+            if (isSelectedByActive) {
+                borderWidth = 6f + 2f * glowAlpha; // Mas grueso para el cursor activo
+            }
             g2d.setColor(borderColor);
             g2d.setStroke(new BasicStroke(borderWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             g2d.drawRoundRect(
@@ -440,6 +626,31 @@ public class PanelSeleccionPersonaje extends JPanel {
                 int hintY = h - 14;
                 g2d.setColor(new Color(255, 255, 255, (int)(180 * glowAlpha)));
                 g2d.drawString(hint, hintX, hintY);
+            }
+
+            // 8. Banner "J1 ELEGIDO" si J1 seleccionó este personaje y estamos en la selección de J2
+            if (isPvP && pvpStep == 2 && tipoPersonaje == j1ChosenCharacter) {
+                // Dibujar overlay rojo semitransparente
+                g2d.setColor(new Color(225, 40, 40, 100));
+                g2d.fillRoundRect(0, 0, w, h, arc, arc);
+
+                // Dibujar banner oblicuo o centrado
+                g2d.setColor(new Color(180, 20, 20));
+                g2d.fillRect(0, h/2 - 25, w, 50);
+
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(cardTitleFont.deriveFont(Font.BOLD, 22f));
+                FontMetrics fmChosen = g2d.getFontMetrics();
+                String chosenText = "J1 CONFIRMADO";
+                int cx = (w - fmChosen.stringWidth(chosenText)) / 2;
+                int cy = h/2 + fmChosen.getAscent()/2 - 4;
+                
+                // Sombra de texto
+                g2d.setColor(Color.BLACK);
+                g2d.drawString(chosenText, cx + 2, cy + 2);
+                
+                g2d.setColor(Color.WHITE);
+                g2d.drawString(chosenText, cx, cy);
             }
 
             g2d.dispose();
@@ -539,4 +750,5 @@ public class PanelSeleccionPersonaje extends JPanel {
             return new Color(r, gv, b);
         }
     }
+
 }

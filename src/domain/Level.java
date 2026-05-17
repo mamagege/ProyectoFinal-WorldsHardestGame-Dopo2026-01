@@ -13,10 +13,16 @@ public class Level {
     private Tablero tablero;
     private boolean completed;
     private boolean isSelectionLevel = false;
+    private GameStrategy strategy;
 
     public Level(Tablero tablero) {
         this.tablero = tablero;
         this.completed = false;
+        this.strategy = new SinglePlayerMode(); // Default strategy
+    }
+
+    public void setStrategy(GameStrategy strategy) {
+        this.strategy = strategy;
     }
 
     /**
@@ -25,16 +31,24 @@ public class Level {
     public void tick() {
         if (completed) return;
 
-        Character character = tablero.getCharacter();
-
-        if (character.isExploding()) {
-            character.updateExplosion();
-            if (!character.isExploding()) {
-                // La animación terminó
-                character.incrementDeaths();
-                resetCharacterPosition();
+        // Si algún personaje está explotando, pausamos la física temporalmente
+        for (Character character : tablero.getCharacters()) {
+            if (character.isExploding()) {
+                character.updateExplosion();
+                if (!character.isExploding()) {
+                    // Animación finalizada
+                    character.incrementDeaths();
+                    if (strategy != null && strategy instanceof PvPMode) {
+                        PvPMode.resetCharacter(tablero, character);
+                    } else {
+                        SinglePlayerMode.resetCharacterToSpawn(tablero, character);
+                        for (Coin coin : tablero.getCoins()) {
+                            coin.reset();
+                        }
+                    }
+                }
+                return; // Pausa el juego mientras ocurre la animación (de cualquier jugador)
             }
-            return; // Pausa el juego mientras ocurre la animación
         }
 
         // 1. Mover obstáculos y rebotar en paredes
@@ -60,94 +74,49 @@ public class Level {
             }
         }
 
-        // 2. Mover personaje y validar paredes
-        moveCharacter();
+        // 2. Mover personajes y validar paredes
+        moveCharacters();
 
-        // 3. Chequear colisiones (AABB)
-        checkCollisions();
-    }
-
-    private void moveCharacter() {
-        Character character = tablero.getCharacter();
-        
-        // 1. Mover y validar en X
-        double oldX = character.getPositionX();
-        character.updatePositionX();
-        
-        // APLICAR CLAMP ESPACIAL EN X
-        character.setPositionX(tablero.clampCharacterX(character.getPositionX(), character.getWidth()));
-        
-        for (Wall wall : tablero.getWalls()) {
-            if (CollisionDetector.checkCollision(character, wall)) {
-                character.setPositionX(oldX);
-                break;
-            }
-        }
-
-        // 2. Mover y validar en Y
-        double oldY = character.getPositionY();
-        character.updatePositionY();
-        
-        // APLICAR CLAMP ESPACIAL EN Y
-        character.setPositionY(tablero.clampCharacterY(character.getPositionY(), character.getHeight()));
-
-        for (Wall wall : tablero.getWalls()) {
-            if (CollisionDetector.checkCollision(character, wall)) {
-                character.setPositionY(oldY);
-                break;
-            }
+        // 3. Chequear colisiones usando la estrategia
+        if (strategy != null) {
+            strategy.checkCollisions(this);
         }
     }
 
-    private void checkCollisions() {
-        Character character = tablero.getCharacter();
-        
-        // Colisiones con obstáculos mortales
-        for (Obstacle obstacle : tablero.getObstacles()) {
-            if (CollisionDetector.checkCollision(character, obstacle)) {
-                if (character.hasArmor()) {
-                    character.removeArmor();
-                    resetCharacterPosition(); 
-                } else {
-                    character.triggerExplosion(); // Inicia animación en vez de morir instántaneamente
+    private void moveCharacters() {
+        for (Character character : tablero.getCharacters()) {
+            // 1. Mover y validar en X
+            double oldX = character.getPositionX();
+            character.updatePositionX();
+            
+            // APLICAR CLAMP ESPACIAL EN X
+            character.setPositionX(tablero.clampCharacterX(character.getPositionX(), character.getWidth()));
+            
+            for (Wall wall : tablero.getWalls()) {
+                if (CollisionDetector.checkCollision(character, wall)) {
+                    character.setPositionX(oldX);
+                    break;
                 }
-                return;
+            }
+
+            // 2. Mover y validar en Y
+            double oldY = character.getPositionY();
+            character.updatePositionY();
+            
+            // APLICAR CLAMP ESPACIAL EN Y
+            character.setPositionY(tablero.clampCharacterY(character.getPositionY(), character.getHeight()));
+
+            for (Wall wall : tablero.getWalls()) {
+                if (CollisionDetector.checkCollision(character, wall)) {
+                    character.setPositionY(oldY);
+                    break;
+                }
             }
         }
-
-        // Recolección de monedas
-        for (Coin coin : tablero.getCoins()) {
-            if (!coin.isCollected() && CollisionDetector.checkCollision(character, coin)) {
-                coin.collect();
-            }
-        }
-
-        // Comprueba la condición de victoria
-        if (allCoinsCollected() && tablero.getGoal() != null && CollisionDetector.checkCollision(character, tablero.getGoal())) {
-            completed = true;
-        }
     }
 
-    private void resetCharacterPosition() {
-        List<Checkpoint> checkpoints = tablero.getCheckpoints();
-        Character character = tablero.getCharacter();
-        
-        if (!checkpoints.isEmpty()) {
-            Checkpoint initial = checkpoints.get(0);
-            character.setPositionX(initial.getPositionX());
-            character.setPositionY(initial.getPositionY());
-        }
-        for (Coin coin : tablero.getCoins()) {
-            coin.reset();
-        }
-    }
-
-    private boolean allCoinsCollected() {
-        for (Coin coin : tablero.getCoins()) {
-            if (!coin.isCollected()) return false;
-        }
-        return true;
-    }
+    // Los métodos antiguos de colisiones, victoria y reinicio 
+    // se han delegado a las clases GameMode y GameStrategy.
 
     // Getters delegados al Tablero para asegurar COMPATIBILIDAD de refactorización con presentación.
     public Tablero getTablero() { return tablero; }
@@ -164,6 +133,10 @@ public class Level {
     // Setters de soporte delegados
     public void setTiles(List<Tile> tiles) { tablero.setTiles(tiles); }
     public void setModalityZones(List<ModalityZone> modalityZones) { tablero.setModalityZones(modalityZones); }
+    
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
+    }
 
     // Métodos de estado del juego
     public void softReset() {

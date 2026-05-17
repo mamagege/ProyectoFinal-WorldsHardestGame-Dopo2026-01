@@ -43,7 +43,8 @@ public class GameWHGGUI {
             System.err.println(ex.getMessage());
             boolean isVisible = mainWindow != null && mainWindow.isVisible();
             if (isVisible) {
-                javax.swing.JOptionPane.showMessageDialog(null, ex.getMessage(), "Error al cargar nivel", javax.swing.JOptionPane.ERROR_MESSAGE);
+                javax.swing.JOptionPane.showMessageDialog(null, ex.getMessage(), "Error al cargar nivel",
+                        javax.swing.JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -61,10 +62,11 @@ public class GameWHGGUI {
      *
      * @param tipoPersonaje 0=Rojo(Rafael), 1=Azul(Leonardo), 2=Verde(MiguelAngelo)
      */
-    public void iniciarJuegoConPersonaje(int tipoPersonaje) {
+    public void iniciarJuegoConPersonaje(int p1Type, int p2Type) {
         try {
-            gameFacade.startGameWithCharacter(tipoPersonaje);
-            mainWindow.mostrarPanel("JUEGO");
+            gameFacade.startGameWithCharacters(p1Type, p2Type);
+            mainWindow.getPanelSplashLimbo().startSequence();
+            mainWindow.mostrarPanel("SPLASH_LIMBO");
         } catch (GameWHGException e) {
             domain.Log.record(e);
             boolean isVisible = mainWindow != null && mainWindow.isVisible();
@@ -90,6 +92,10 @@ public class GameWHGGUI {
 
     public GameWHG getGameFacade() {
         return gameFacade;
+    }
+
+    public VentanaPrincipal getMainWindow() {
+        return mainWindow;
     }
 
     public Modality getCurrentModality() {

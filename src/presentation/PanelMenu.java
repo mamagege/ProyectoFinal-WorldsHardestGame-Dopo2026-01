@@ -100,6 +100,7 @@ public class PanelMenu extends JPanel {
 
         // Configurar acciones directas (Transicion al splash antes de la seleccion de modalidad)
         btnJugar.addActionListener(e -> {
+            ventana.getGameOrchestrator().resetGame();
             ventana.getPanelSplashLimbo().startSequence();
             ventana.mostrarPanel("SPLASH_LIMBO");
         });

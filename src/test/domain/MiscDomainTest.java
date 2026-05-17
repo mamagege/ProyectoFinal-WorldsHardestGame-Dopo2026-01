@@ -85,4 +85,27 @@ public class MiscDomainTest {
         LevelLoadException ex = new LevelLoadException("Test");
         assertTrue(ex instanceof Exception, "LevelLoadException should be a checked Exception");
     }
+
+    @Test
+    public void shouldTransitionToPvPMetaModeWhenCollidingWithPvPPortal() throws Exception {
+        GameWHG game = new GameWHG();
+        game.prepareLevels();
+        assertEquals(Modality.PLAYER, game.getCurrentModality());
+
+        // El jugador empieza en (24.0, 22.0)
+        // El portal PVP está en (19.0, 3.5, 4.0, 6.5)
+        // Colocamos al personaje del nivel actual justo dentro del portal PVP
+        game.getCurrentLevel().getCharacter().setPositionX(20.0);
+        game.getCurrentLevel().getCharacter().setPositionY(5.0);
+
+        // Actualizamos tick
+        game.updateGameTick();
+
+        // Verificamos que se detectó la colisión y se cambió a PVP
+        assertEquals(Modality.PVP, game.getCurrentModality(), "Debería haber cambiado a modalidad PVP");
+        assertTrue(game.shouldGoSelectionMenu(), "Debería activar flag para ir al menú de selección");
+        // Y que la posición se reseteó
+        assertEquals(24.0, game.getCurrentLevel().getCharacter().getPositionX(), 0.001);
+        assertEquals(22.0, game.getCurrentLevel().getCharacter().getPositionY(), 0.001);
+    }
 }

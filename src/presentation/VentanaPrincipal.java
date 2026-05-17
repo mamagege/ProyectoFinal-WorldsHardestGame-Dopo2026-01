@@ -66,6 +66,12 @@ public class VentanaPrincipal extends JFrame {
         if (nombrePanel.equals("JUEGO")) {
             panelJuego.resetKeyboard(); // Erradicar fantasmgeo de teclas de pantallas previas
             SwingUtilities.invokeLater(() -> panelJuego.requestFocusInWindow());
+        } else {
+            panelJuego.resetKeyboard(); // Detener cualquier movimiento de fondo en otros paneles
+            if (nombrePanel.equals("SELECCION")) {
+                panelSeleccion.resetSelection();
+                SwingUtilities.invokeLater(() -> panelSeleccion.requestFocusInWindow());
+            }
         }
     }
 

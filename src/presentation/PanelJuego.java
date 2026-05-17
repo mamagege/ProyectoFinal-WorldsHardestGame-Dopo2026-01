@@ -583,76 +583,81 @@ public class PanelJuego extends JPanel {
             g2d.fillOval(px, py, w, h);
         }
 
-        // 5. Jugador o Animación de Explosión
-        Character pJugador = level.getCharacter();
+        // 5. Jugadores o Animaciones de Explosión
+        java.util.List<Character> characters = level.getTablero().getCharacters();
+        if (characters != null) {
+            for (Character pJugador : characters) {
+                if (pJugador == null) continue;
+                
+                if (pJugador.isExploding()) {
+                    g2d.setColor(Color.RED);
+                    for (Particle p : pJugador.getFragments()) {
+                        int px = offsetX + (int) (p.getPositionX() * TAMANO_CELDA);
+                        int py = offsetY + (int) (p.getPositionY() * TAMANO_CELDA);
+                        int pw = (int) (p.getWidth() * TAMANO_CELDA);
+                        int ph = (int) (p.getHeight() * TAMANO_CELDA);
+                        g2d.fillRect(px, py, pw, ph);
+                    }
+                } else {
+                    int fullW = (int) (pJugador.getWidth() * TAMANO_CELDA);
+                    int fullH = (int) (pJugador.getHeight() * TAMANO_CELDA);
+                    int pw = fullW;
+                    int ph = fullH;
+                    int px = offsetX + (int) (pJugador.getPositionX() * TAMANO_CELDA);
+                    int py = offsetY + (int) (pJugador.getPositionY() * TAMANO_CELDA);
 
-        if (pJugador.isExploding()) {
-            g2d.setColor(Color.RED);
-            for (Particle p : pJugador.getFragments()) {
-                int px = offsetX + (int) (p.getPositionX() * TAMANO_CELDA);
-                int py = offsetY + (int) (p.getPositionY() * TAMANO_CELDA);
-                int pw = (int) (p.getWidth() * TAMANO_CELDA);
-                int ph = (int) (p.getHeight() * TAMANO_CELDA);
-                g2d.fillRect(px, py, pw, ph);
+                    // Borde grueso negro (Fondo)
+                    g2d.setColor(Color.BLACK);
+                    g2d.fillRect(px, py, pw, ph);
+
+                    // Interior de color
+                    int border = Math.max(2, pw / 16);
+                    if (pJugador.hasArmor()) {
+                        g2d.setColor(new Color(50, 190, 80)); // GREEN
+                    } else if (pJugador instanceof BlueCharacter) {
+                        g2d.setColor(new Color(60, 130, 220)); // BLUE
+                    } else if (pJugador instanceof WhiteCharacter) {
+                        g2d.setColor(Color.WHITE); // WHITE
+                    } else {
+                        g2d.setColor(new Color(220, 60, 60)); // RED
+                    }
+                    g2d.fillRect(px + border, py + border, pw - 2*border, ph - 2*border);
+
+                    // Activar antialiasing para los ojos
+                    Object antialiasHint = g2d.getRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING);
+                    g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
+                    int eyeRadius = (int) (pw * 0.16);
+                    int eyeY = py + (int) (ph * 0.35);
+
+                    // Centros de los ojos
+                    int eyeLeftCX = px + (int) (pw * 0.35);
+                    int eyeRightCX = px + (int) (pw * 0.65);
+
+                    // Dibujar escleróticas (blanco)
+                    g2d.setColor(Color.WHITE);
+                    g2d.fillOval(eyeLeftCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+                    g2d.fillOval(eyeRightCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+                    
+                    // Dibujar bordes de los ojos
+                    g2d.setColor(Color.BLACK);
+                    java.awt.Stroke oldStroke = g2d.getStroke();
+                    g2d.setStroke(new java.awt.BasicStroke(1.5f));
+                    g2d.drawOval(eyeLeftCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+                    g2d.drawOval(eyeRightCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+                    g2d.setStroke(oldStroke);
+
+                    // Dibujar pupilas (Mirando al frente de forma neutral/asustada pero estática)
+                    int pupilRadius = (int) (eyeRadius * 0.45);
+                    g2d.setColor(Color.BLACK);
+                    g2d.fillOval(eyeLeftCX - pupilRadius, eyeY - pupilRadius, pupilRadius * 2, pupilRadius * 2);
+                    g2d.fillOval(eyeRightCX - pupilRadius, eyeY - pupilRadius, pupilRadius * 2, pupilRadius * 2);
+
+                    // Restaurar estado de renderizado
+                    g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                            antialiasHint != null ? antialiasHint : java.awt.RenderingHints.VALUE_ANTIALIAS_DEFAULT);
+                }
             }
-        } else {
-            int fullW = (int) (pJugador.getWidth() * TAMANO_CELDA);
-            int fullH = (int) (pJugador.getHeight() * TAMANO_CELDA);
-            int pw = fullW;
-            int ph = fullH;
-            int px = offsetX + (int) (pJugador.getPositionX() * TAMANO_CELDA);
-            int py = offsetY + (int) (pJugador.getPositionY() * TAMANO_CELDA);
-
-            // Borde grueso negro (Fondo)
-            g2d.setColor(Color.BLACK);
-            g2d.fillRect(px, py, pw, ph);
-
-            // Interior de color
-            int border = Math.max(2, pw / 16);
-            if (pJugador.hasArmor()) {
-                g2d.setColor(new Color(50, 190, 80)); // GREEN
-            } else if (pJugador instanceof BlueCharacter) {
-                g2d.setColor(new Color(60, 130, 220)); // BLUE
-            } else if (pJugador instanceof WhiteCharacter) {
-                g2d.setColor(Color.WHITE); // WHITE
-            } else {
-                g2d.setColor(new Color(220, 60, 60)); // RED
-            }
-            g2d.fillRect(px + border, py + border, pw - 2*border, ph - 2*border);
-
-            // Activar antialiasing para los ojos
-            Object antialiasHint = g2d.getRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING);
-            g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-
-            int eyeRadius = (int) (pw * 0.16);
-            int eyeY = py + (int) (ph * 0.35);
-
-            // Centros de los ojos
-            int eyeLeftCX = px + (int) (pw * 0.35);
-            int eyeRightCX = px + (int) (pw * 0.65);
-
-            // Dibujar escleróticas (blanco)
-            g2d.setColor(Color.WHITE);
-            g2d.fillOval(eyeLeftCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
-            g2d.fillOval(eyeRightCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
-            
-            // Dibujar bordes de los ojos
-            g2d.setColor(Color.BLACK);
-            java.awt.Stroke oldStroke = g2d.getStroke();
-            g2d.setStroke(new java.awt.BasicStroke(1.5f));
-            g2d.drawOval(eyeLeftCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
-            g2d.drawOval(eyeRightCX - eyeRadius, eyeY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
-            g2d.setStroke(oldStroke);
-
-            // Dibujar pupilas (Mirando al frente de forma neutral/asustada pero estática)
-            int pupilRadius = (int) (eyeRadius * 0.45);
-            g2d.setColor(Color.BLACK);
-            g2d.fillOval(eyeLeftCX - pupilRadius, eyeY - pupilRadius, pupilRadius * 2, pupilRadius * 2);
-            g2d.fillOval(eyeRightCX - pupilRadius, eyeY - pupilRadius, pupilRadius * 2, pupilRadius * 2);
-
-            // Restaurar estado de renderizado
-            g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
-                    antialiasHint != null ? antialiasHint : java.awt.RenderingHints.VALUE_ANTIALIAS_DEFAULT);
         }
         
         // 6. Renderizar Tutorial flotante en el nivel 1
@@ -685,7 +690,7 @@ public class PanelJuego extends JPanel {
                 }
                 break;
             case PVP:
-                g2d.setColor(new Color(241, 196, 15));
+                g2d.setColor(new Color(46, 204, 113)); // Verde Místico Esmeralda
                 g2d.fillOval(x, y, size, size);
                 g2d.setColor(Color.BLACK);
                 g2d.setFont(new Font("Arial", Font.BOLD, size / 3));

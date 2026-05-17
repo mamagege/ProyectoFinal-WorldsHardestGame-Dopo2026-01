@@ -58,6 +58,7 @@ public class GameWHG {
         
         if (!levels.isEmpty()) {
             currentLevel = levels.get(0);
+            currentLevel.setStrategy(new SinglePlayerMode()); // HUB Selection is basically SinglePlayer
         }
     }
 
@@ -69,6 +70,7 @@ public class GameWHG {
         if (!levels.isEmpty()) {
             currentLevel = levels.get(0);
         }
+        this.currentModality = Modality.PLAYER;
     }
 
     /**
@@ -84,11 +86,13 @@ public class GameWHG {
         if (currentLevel.isSelectionLevel()) {
             for (ModalityZone zone : currentLevel.getModalityZones()) {
                 if (CollisionDetector.checkCollision(currentLevel.getCharacter(), zone)) {
+                    System.out.println("[DEBUG] Collision detected with ModalityZone: " + zone.getModality());
                     this.currentModality = zone.getModality();
                     System.out.println("Modalidad seleccionada: " + this.currentModality);
-                    // Resetear posición
+                    // Resetear posición y velocidad
                     currentLevel.getCharacter().setPositionX(24.0);
                     currentLevel.getCharacter().setPositionY(22.0);
+                    currentLevel.getCharacter().setVelocity(0.0, 0.0);
                     goSelectionMenuFlag = true;
                     return;
                 }
@@ -104,21 +108,6 @@ public class GameWHG {
                 return;
             }
 
-            boolean allCoinsCollected = true;
-            if (currentLevel.getCoins() != null) {
-                for (Coin coin : currentLevel.getCoins()) {
-                    if (!coin.isCollected()) {
-                        allCoinsCollected = false;
-                        break;
-                    }
-                }
-            }
-            
-            if (!allCoinsCollected) {
-                currentLevel.softReset();
-                throw new GameWHGException(GameWHGException.ERROR_AVANCE_PREMATURO);
-            }
-
             currentLevelIndex++;
             if (currentLevelIndex < levels.size()) {
                 currentLevel = levels.get(currentLevelIndex);
@@ -130,39 +119,48 @@ public class GameWHG {
     }
 
     /**
-     * Inicia el juego inyectando el personaje seleccionado en todos los niveles.
+     * Inicia el juego inyectando los personajes seleccionados en todos los niveles.
      */
-    public void startGameWithCharacter(int characterType) throws GameWHGException {
-        if (characterType < 0 || characterType > 2) {
+    public void startGameWithCharacters(int p1Type, int p2Type) throws GameWHGException {
+        if (p1Type < 0 || p1Type > 2 || (currentModality == Modality.PVP && (p2Type < 0 || p2Type > 2))) {
             throw new GameWHGException(GameWHGException.ERROR_PERSONAJE_INVALIDO);
         }
 
         for (Level lvl : levels) {
             lvl.softReset();
+            // Inyectar estrategia
+            if (currentModality == Modality.PVP) {
+                lvl.setStrategy(new PvPMode());
+            } else if (currentModality == Modality.PVSM) {
+                lvl.setStrategy(new PvSMMode());
+            } else {
+                lvl.setStrategy(new SinglePlayerMode());
+            }
         }
 
         for (int i = 1; i < levels.size(); i++) {
             Level lvl = levels.get(i);
+            Tablero tablero = lvl.getTablero();
+            
             double spawnX = 1.0, spawnY = 1.0;
-            if (!lvl.getCheckpoints().isEmpty()) {
-                spawnX = lvl.getCheckpoints().get(0).getPositionX();
-                spawnY = lvl.getCheckpoints().get(0).getPositionY();
+            if (!tablero.getCheckpoints().isEmpty()) {
+                spawnX = tablero.getCheckpoints().get(0).getPositionX();
+                spawnY = tablero.getCheckpoints().get(0).getPositionY();
             }
             
-            Character c;
-            // 0=Rojo, 1=Azul, 2=Verde
-            switch (characterType) {
-                case 1:
-                    c = new domain.BlueCharacter(spawnX, spawnY);
-                    break;
-                case 2:
-                    c = new domain.GreenCharacter(spawnX, spawnY);
-                    break;
-                default:
-                    c = new domain.RedCharacter(spawnX, spawnY);
-                    break;
+            List<Character> chars = new ArrayList<>();
+            chars.add(createCharacter(p1Type, spawnX, spawnY));
+
+            if (currentModality == Modality.PVP) {
+                double p2SpawnX = 40.0, p2SpawnY = 20.0;
+                if (tablero.getGoal() != null) {
+                    p2SpawnX = tablero.getGoal().getPositionX();
+                    p2SpawnY = tablero.getGoal().getPositionY();
+                }
+                chars.add(createCharacter(p2Type, p2SpawnX, p2SpawnY));
             }
-            lvl.getTablero().setCharacter(c);
+            
+            tablero.setCharacters(chars);
         }
 
         currentLevelIndex = 1;
@@ -171,12 +169,23 @@ public class GameWHG {
         }
     }
 
+    private Character createCharacter(int type, double x, double y) {
+        switch (type) {
+            case 1: return new domain.BlueCharacter(x, y);
+            case 2: return new domain.GreenCharacter(x, y);
+            default: return new domain.RedCharacter(x, y);
+        }
+    }
+
     /**
      * Traduce los inputs de la presentación a velocidades físicas.
      */
-    public void movePlayer(double vx, double vy) {
+    public void movePlayer(int playerId, double vx, double vy) {
         if (currentLevel == null || currentLevel.isCompleted()) return;
-        currentLevel.getCharacter().setVelocity(vx, vy);
+        List<Character> chars = currentLevel.getTablero().getCharacters();
+        if (chars != null && playerId >= 0 && playerId < chars.size()) {
+            chars.get(playerId).setVelocity(vx, vy);
+        }
     }
 
     // Getters de Sólo Lectura para la Vista
@@ -192,9 +201,12 @@ public class GameWHG {
         return currentModality;
     }
     
-    public double getPlayerSpeed() {
-        if (currentLevel != null && currentLevel.getCharacter() != null) {
-            return currentLevel.getCharacter().getSpeed();
+    public double getPlayerSpeed(int playerId) {
+        if (currentLevel != null) {
+            List<Character> chars = currentLevel.getTablero().getCharacters();
+            if (chars != null && playerId >= 0 && playerId < chars.size()) {
+                return chars.get(playerId).getSpeed();
+            }
         }
         return 0;
     }

@@ -27,7 +27,7 @@ public class Tablero {
     private double tileMinY = -1;
     private double tileMaxY = -1;
 
-    private Character character;
+    private List<Character> characters;
     private List<Obstacle> obstacles;
     private List<Coin> coins;
     private List<Wall> walls;
@@ -42,7 +42,10 @@ public class Tablero {
         this.boardHeight = boardHeight;
         this.maxX = boardWidth;
         this.maxY = boardHeight;
-        this.character = character;
+        
+        this.characters = new ArrayList<>();
+        if (character != null) this.characters.add(character);
+        
         this.obstacles = obstacles != null ? obstacles : new ArrayList<>();
         this.coins = coins != null ? coins : new ArrayList<>();
         this.walls = walls != null ? walls : new ArrayList<>();
@@ -117,8 +120,23 @@ public class Tablero {
     public double getMaxX() { return maxX; }
     public double getMinY() { return minY; }
     public double getMaxY() { return maxY; }
-    public Character getCharacter() { return character; }
-    public void setCharacter(Character character) { this.character = character; }
+    public Character getCharacter() {
+        if (characters.isEmpty()) return null;
+        return characters.get(0);
+    }
+    
+    public List<Character> getCharacters() {
+        return characters;
+    }
+
+    public void setCharacter(Character character) {
+        this.characters.clear();
+        if (character != null) this.characters.add(character);
+    }
+    
+    public void setCharacters(List<Character> characters) {
+        this.characters = characters;
+    }
     public List<Obstacle> getObstacles() { return obstacles; }
     public List<Coin> getCoins() { return coins; }
     public List<Wall> getWalls() { return walls; }
