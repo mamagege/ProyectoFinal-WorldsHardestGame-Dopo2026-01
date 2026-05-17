@@ -2,6 +2,7 @@ package presentation;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import domain.GameWHGException;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -29,9 +30,17 @@ public class PanelSplashScreen extends JPanel {
         setBackground(Color.BLACK);
 
         try {
-            splashImage = ImageIO.read(new File("src/resources/images/" + imagePath));
-        } catch (IOException e) {
-            System.err.println("Error cargando splash screen image: " + e.getMessage());
+            try {
+                splashImage = ImageIO.read(new File("src/resources/images/" + imagePath));
+                if (splashImage == null) {
+                    throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+                }
+            } catch (IOException e) {
+                throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+            }
+        } catch (GameWHGException ex) {
+            domain.Log.record(ex);
+            System.err.println("Error de recurso: " + ex.getMessage());
         }
 
         // Preparar motor de animación

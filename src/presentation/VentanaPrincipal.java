@@ -18,9 +18,9 @@ public class VentanaPrincipal extends JFrame {
     private PanelSplashScreen panelSplashIntro;
     private PanelSplashScreen panelSplashLimbo;
     private PanelSeleccionPersonaje panelSeleccion;
-    private GameWHG gameOrchestrator;
+    private GameWHGGUI gameOrchestrator;
 
-    public VentanaPrincipal(GameWHG gameOrchestrator) {
+    public VentanaPrincipal(GameWHGGUI gameOrchestrator) {
         this.gameOrchestrator = gameOrchestrator;
         setTitle("The DOPO Hardest Game");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -81,7 +81,7 @@ public class VentanaPrincipal extends JFrame {
         return panelSeleccion;
     }
 
-    public GameWHG getGameOrchestrator() {
+    public GameWHGGUI getGameOrchestrator() {
         return gameOrchestrator;
     }
 }

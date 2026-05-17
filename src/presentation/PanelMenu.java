@@ -2,6 +2,7 @@ package presentation;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import domain.GameWHGException;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.event.MouseAdapter;
@@ -63,28 +64,26 @@ public class PanelMenu extends JPanel {
 
         // 1. Carga de Recursos (Fuentes e Imágenes)
         try {
-            backgroundImage = ImageIO.read(new File("src/resources/images/fondo_arcoiris.png"));
-            macabreBackgroundImage = ImageIO.read(new File("src/resources/images/fondo_macabro.png"));
-        } catch (IOException e) {
-            System.err.println("Advertencia: No se pudieron cargar los fondos");
-        }
+            try {
+                backgroundImage = ImageIO.read(new File("src/resources/images/fondo_arcoiris.png"));
+                macabreBackgroundImage = ImageIO.read(new File("src/resources/images/fondo_macabro.png"));
+                normalImage = ImageIO.read(new File("src/resources/images/estrella.png"));
+                macabreImage = ImageIO.read(new File("src/resources/images/Estrella_macabra.png"));
 
-        try {
-            normalImage = ImageIO.read(new File("src/resources/images/estrella.png"));
-            macabreImage = ImageIO.read(new File("src/resources/images/Estrella_macabra.png"));
-        } catch (IOException e) {
-            System.err.println("Advertencia: No se pudo cargar estrella.png o Estrella_macabra.png");
-        }
+                File fontFile = new File("src/resources/fonts/HellraiserBloody.ttf");
+                Font baseFont = Font.createFont(Font.TRUETYPE_FONT, fontFile);
+                normalFont = baseFont.deriveFont(60f);
+                macabreFont = baseFont.deriveFont(60f);
 
-        try {
-            File fontFile = new File("src/resources/fonts/HellraiserBloody.ttf");
-            Font baseFont = Font.createFont(Font.TRUETYPE_FONT, fontFile);
-
-            // Unificar la tipografía HellraiserBloody globalmente para ambos estados
-            normalFont = baseFont.deriveFont(60f);
-            macabreFont = baseFont.deriveFont(60f);
-        } catch (FontFormatException | IOException e) {
-            System.err.println("Advertencia: No se pudo cargar HellraiserBloody.ttf");
+                if (backgroundImage == null || macabreBackgroundImage == null || normalImage == null || macabreImage == null) {
+                    throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+                }
+            } catch (FontFormatException | IOException e) {
+                throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+            }
+        } catch (GameWHGException ex) {
+            domain.Log.record(ex);
+            System.err.println("Error de recurso: " + ex.getMessage());
             normalFont = new Font(Font.SANS_SERIF, Font.BOLD, 60);
             macabreFont = normalFont;
         }

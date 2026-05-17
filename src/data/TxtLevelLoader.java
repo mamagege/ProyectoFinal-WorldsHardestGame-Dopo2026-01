@@ -1,7 +1,22 @@
 package data;
 
-import domain.*;
+import domain.Level;
+import domain.LevelLoadException;
+import domain.LevelLoader;
+import domain.Tablero;
 import domain.Character;
+import domain.RedCharacter;
+import domain.Wall;
+import domain.Checkpoint;
+import domain.Goal;
+import domain.Coin;
+import domain.Tile;
+import domain.Obstacle;
+import domain.BasicObstacle;
+import domain.FastObstacle;
+import domain.PatrolObstacle;
+import domain.WaypointObstacle;
+import domain.GameWHGException;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -22,7 +37,12 @@ public class TxtLevelLoader implements LevelLoader {
     public Level loadLevel(int levelNumber) throws LevelLoadException {
         File file = new File(BASE_DIR + "level" + levelNumber + ".txt");
         if (!file.exists()) {
-            throw new LevelLoadException("No se encontró la definición del nivel: " + file.getAbsolutePath());
+            try {
+                throw new GameWHGException(GameWHGException.ERROR_NIVEL_NO_ENCONTRADO);
+            } catch (GameWHGException ex) {
+                domain.Log.record(ex);
+                throw new LevelLoadException(ex.getMessage() + " (Archivo: " + file.getName() + ")", ex);
+            }
         }
 
         double boardW = 20, boardH = 15; // Fallbacks
@@ -116,16 +136,34 @@ public class TxtLevelLoader implements LevelLoader {
                             System.err.println("TxtLevelLoader: Comando desconocido ignorado en línea " + lineNumber + ": " + command);
                     }
                 } catch (Exception syntaxError) {
-                    throw new LevelLoadException("Error de sintaxis en línea " + lineNumber + ": " + syntaxError.getMessage(), syntaxError);
+                    try {
+                        throw new GameWHGException(GameWHGException.ERROR_SINTAXIS_NIVEL);
+                    } catch (GameWHGException ex) {
+                        domain.Log.record(ex);
+                        throw new LevelLoadException(ex.getMessage() + " (Línea: " + lineNumber + ", Detalle: " + syntaxError.getMessage() + ")", syntaxError);
+                    }
                 }
             }
 
         } catch (Exception e) {
             if (e instanceof LevelLoadException) throw (LevelLoadException) e;
-            throw new LevelLoadException("Fallo IO cargando el nivel " + levelNumber, e);
+            try {
+                throw new GameWHGException(GameWHGException.ERROR_FALLO_LECTURA_NIVEL);
+            } catch (GameWHGException ex) {
+                domain.Log.record(ex);
+                throw new LevelLoadException(ex.getMessage() + " (Nivel: " + levelNumber + ")", e);
+            }
         }
 
         // Ensamblado Final del Nivel según el Dominio
+        if (boardW <= 0 || boardH <= 0) {
+            try {
+                throw new GameWHGException(GameWHGException.ERROR_CONEXION_TABLERO);
+            } catch (GameWHGException ex) {
+                domain.Log.record(ex);
+                throw new LevelLoadException(ex.getMessage(), ex);
+            }
+        }
         Character player = new RedCharacter(startX, startY);
         Tablero tablero = new Tablero(boardW, boardH, player, obstacles, coins, walls, checkpoints, goal);
         Level constructedLevel = new Level(tablero);

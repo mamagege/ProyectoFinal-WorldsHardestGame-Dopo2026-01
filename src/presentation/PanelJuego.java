@@ -1,7 +1,6 @@
 package presentation;
 
 import domain.*;
-import domain.CollisionDetector;
 import domain.Character;
 
 import javax.swing.JButton;
@@ -32,7 +31,7 @@ import javax.imageio.ImageIO;
  */
 public class PanelJuego extends JPanel {
     private VentanaPrincipal ventana;
-    private GameWHG gameOrchestrator;
+    private GameWHGGUI gameOrchestrator;
     private final int TAMANO_CELDA = 56; // 56px por unidad lógica → personaje rojo 1.0 ocupa ~75% de la baldosa
     private JLabel labelMuertes;
     private JLabel labelNivel;
@@ -51,7 +50,7 @@ public class PanelJuego extends JPanel {
     private java.util.List<VisualParticle> selectionParticles = new java.util.ArrayList<>();
     private java.util.Random random = new java.util.Random();
 
-    public PanelJuego(VentanaPrincipal ventana, GameWHG gameOrchestrator) {
+    public PanelJuego(VentanaPrincipal ventana, GameWHGGUI gameOrchestrator) {
         this.ventana = ventana;
         this.gameOrchestrator = gameOrchestrator;
         setLayout(new BorderLayout());
@@ -166,49 +165,53 @@ public class PanelJuego extends JPanel {
 
     private void cargarFuentes() {
         try {
-            File fontFile = new File("src/resources/fonts/Luvable.ttf");
-            if (fontFile.exists()) {
-                gameFont = Font.createFont(Font.TRUETYPE_FONT, fontFile).deriveFont(28f);
-            } else {
-                gameFont = new Font("Arial", Font.BOLD, 28); // Fallback
+            try {
+                File fontFile = new File("src/resources/fonts/Luvable.ttf");
+                if (fontFile.exists()) {
+                    gameFont = Font.createFont(Font.TRUETYPE_FONT, fontFile).deriveFont(28f);
+                } else {
+                    throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+                }
+
+                File titleFontFile = new File("src/resources/fonts/HellraiserBloody.ttf");
+                if (titleFontFile.exists()) {
+                    titleFont = Font.createFont(Font.TRUETYPE_FONT, titleFontFile).deriveFont(50f);
+                } else {
+                    throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+                }
+
+                File modalFontFile = new File("src/resources/fonts/HelloWinds.otf");
+                if (modalFontFile.exists()) {
+                    modalityDescFont = Font.createFont(Font.TRUETYPE_FONT, modalFontFile).deriveFont(20f);
+                } else {
+                    throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+                }
+            } catch (FontFormatException | IOException e) {
+                throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
             }
-        } catch (FontFormatException | IOException e) {
+        } catch (GameWHGException ex) {
+            domain.Log.record(ex);
+            System.err.println("Error de recurso: " + ex.getMessage());
             gameFont = new Font("Arial", Font.BOLD, 28);
-        }
-
-        try {
-            File titleFontFile = new File("src/resources/fonts/HellraiserBloody.ttf");
-            if (titleFontFile.exists()) {
-                titleFont = Font.createFont(Font.TRUETYPE_FONT, titleFontFile).deriveFont(50f);
-            } else {
-                titleFont = new Font("Arial", Font.BOLD, 50);
-            }
-        } catch (FontFormatException | IOException e) {
             titleFont = new Font("Arial", Font.BOLD, 50);
-        }
-
-        try {
-            File modalFontFile = new File("src/resources/fonts/HelloWinds.otf");
-            if (modalFontFile.exists()) {
-                modalityDescFont = Font.createFont(Font.TRUETYPE_FONT, modalFontFile).deriveFont(20f);
-            } else {
-                modalityDescFont = new Font("Serif", Font.PLAIN, 20);
-            }
-        } catch (FontFormatException | IOException e) {
             modalityDescFont = new Font("Serif", Font.PLAIN, 20);
         }
     }
 
     private void cargarBackground() {
         try {
-            backgroundImage = ImageIO.read(new File("src/resources/images/fondo_limbo.png"));
-        } catch (IOException e) {
-            System.err.println("Advertencia: No se pudo cargar fondo_limbo.png");
-        }
-        try {
-            level1BackgroundImage = ImageIO.read(new File("src/resources/images/nivel1_fondo.png"));
-        } catch (IOException e) {
-            System.err.println("Advertencia: No se pudo cargar nivel1_fondo.png");
+            try {
+                backgroundImage = ImageIO.read(new File("src/resources/images/fondo_limbo.png"));
+                level1BackgroundImage = ImageIO.read(new File("src/resources/images/nivel1_fondo.png"));
+                if (backgroundImage == null || level1BackgroundImage == null) {
+                    throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+                }
+            } catch (IOException e) {
+                throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+            }
+        } catch (GameWHGException ex) {
+            domain.Log.record(ex);
+            System.err.println("Error de recurso: " + ex.getMessage());
         }
     }
 

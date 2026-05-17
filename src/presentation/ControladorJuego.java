@@ -1,7 +1,6 @@
 package presentation;
 
-import domain.*;
-import domain.Character;
+import domain.GameWHG;
 
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -14,14 +13,14 @@ import java.awt.event.KeyEvent;
  * @version 2026
  */
 public class ControladorJuego extends KeyAdapter {
-    private GameWHG gameOrchestrator;
+    private GameWHGGUI gameOrchestrator;
     
     private boolean upPressed = false;
     private boolean downPressed = false;
     private boolean leftPressed = false;
     private boolean rightPressed = false;
 
-    public ControladorJuego(PanelJuego vista, GameWHG gameOrchestrator) {
+    public ControladorJuego(PanelJuego vista, GameWHGGUI gameOrchestrator) {
         this.gameOrchestrator = gameOrchestrator;
     }
 
@@ -45,11 +44,10 @@ public class ControladorJuego extends KeyAdapter {
     }
     
     public void updateVelocity() {
-        Level level = gameOrchestrator.getCurrentLevel();
-        if (level == null || level.isCompleted()) return;
+        GameWHG facade = gameOrchestrator.getGameFacade();
+        if (facade == null) return;
         
-        Character pJugador = level.getCharacter();
-        double speed = pJugador.getSpeed();
+        double speed = facade.getPlayerSpeed();
         
         double vx = 0;
         double vy = 0;
@@ -59,7 +57,7 @@ public class ControladorJuego extends KeyAdapter {
         if (leftPressed) vx -= speed;
         if (rightPressed) vx += speed;
         
-        pJugador.setVelocity(vx, vy);
+        facade.movePlayer(vx, vy);
     }
 
     public void resetKeyStates() {

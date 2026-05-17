@@ -1,11 +1,8 @@
 package presentation;
 
-import domain.RedCharacter;
-import domain.BlueCharacter;
-import domain.GreenCharacter;
-
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import domain.GameWHGException;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -34,7 +31,7 @@ public class PanelSeleccionPersonaje extends JPanel {
     //  Referencias
     // ------------------------------------------------------------------ //
     private final VentanaPrincipal ventana;
-    private final GameWHG          gameOrchestrator;
+    private final GameWHGGUI          gameOrchestrator;
 
     // ------------------------------------------------------------------ //
     //  Recursos graficos
@@ -59,7 +56,7 @@ public class PanelSeleccionPersonaje extends JPanel {
     // ====================================================================
     //  CONSTRUCTOR
     // ====================================================================
-    public PanelSeleccionPersonaje(VentanaPrincipal ventana, GameWHG gameOrchestrator) {
+    public PanelSeleccionPersonaje(VentanaPrincipal ventana, GameWHGGUI gameOrchestrator) {
         this.ventana          = ventana;
         this.gameOrchestrator = gameOrchestrator;
         setLayout(null);  // Layout absoluto; doLayout() posiciona las tarjetas
@@ -77,24 +74,25 @@ public class PanelSeleccionPersonaje extends JPanel {
     // ====================================================================
     private void cargarRecursos() {
         try {
-            backgroundImage = ImageIO.read(new File("src/resources/images/fondo_SelectPlayer.png"));
-        } catch (IOException e) {
-            System.err.println("Advertencia: no se pudo cargar fondo_SelectPlayer.png");
-        }
-        try {
-            Font base = Font.createFont(Font.TRUETYPE_FONT,
-                            new File("src/resources/fonts/HellraiserBloody.ttf"));
-            titleFont    = base.deriveFont(Font.PLAIN, 70f);
-            cardTitleFont = base.deriveFont(Font.PLAIN, 36f);
-        } catch (FontFormatException | IOException e) {
+            try {
+                backgroundImage = ImageIO.read(new File("src/resources/images/fondo_SelectPlayer.png"));
+                if (backgroundImage == null) {
+                    throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+                }
+
+                Font base = Font.createFont(Font.TRUETYPE_FONT, new File("src/resources/fonts/HellraiserBloody.ttf"));
+                titleFont    = base.deriveFont(Font.PLAIN, 70f);
+                cardTitleFont = base.deriveFont(Font.PLAIN, 36f);
+
+                cardStatsFont = Font.createFont(Font.TRUETYPE_FONT, new File("src/resources/fonts/Luvable.ttf")).deriveFont(Font.PLAIN, 18f);
+            } catch (FontFormatException | IOException e) {
+                throw new GameWHGException(GameWHGException.ERROR_CARGA_RECURSO);
+            }
+        } catch (GameWHGException ex) {
+            domain.Log.record(ex);
+            System.err.println("Error de recurso: " + ex.getMessage());
             titleFont     = new Font("SansSerif", Font.BOLD, 60);
             cardTitleFont = new Font("SansSerif", Font.BOLD, 30);
-        }
-        try {
-            cardStatsFont = Font.createFont(Font.TRUETYPE_FONT,
-                                new File("src/resources/fonts/Luvable.ttf"))
-                                .deriveFont(Font.PLAIN, 18f);
-        } catch (FontFormatException | IOException e) {
             cardStatsFont = new Font("SansSerif", Font.PLAIN, 16);
         }
     }
@@ -344,7 +342,9 @@ public class PanelSeleccionPersonaje extends JPanel {
                     mousePos = java.awt.MouseInfo.getPointerInfo().getLocation();
                     javax.swing.SwingUtilities.convertPointFromScreen(mousePos, this);
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                domain.Log.record(e);
+            }
             
             if (mousePos != null) {
                 double dist = Math.hypot(mousePos.x - w/2.0, mousePos.y - h/2.0);
@@ -478,7 +478,9 @@ public class PanelSeleccionPersonaje extends JPanel {
                     mousePos = java.awt.MouseInfo.getPointerInfo().getLocation();
                     javax.swing.SwingUtilities.convertPointFromScreen(mousePos, this);
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                domain.Log.record(e);
+            }
 
             int mouseX = mousePos != null ? mousePos.x : (x + size / 2);
             int mouseY = mousePos != null ? mousePos.y : (y + size);
